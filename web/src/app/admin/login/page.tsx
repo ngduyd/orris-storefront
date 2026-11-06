@@ -21,7 +21,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <span className="label">Password</span>
           <input name="password" type="password" required autoComplete="current-password" className="mt-2 w-full border border-line bg-transparent px-3 py-2.5 text-sm focus:border-ink focus:outline-none" />
         </label>
-        {error ? <p className="text-sm text-brass">Wrong email or password.</p> : null}
+        {error === "slow" ? (
+          <p className="text-sm text-brass">Quá nhiều lần thử. Đợi 15 phút.</p>
+        ) : error ? (
+          <p className="text-sm text-brass">Wrong email or password.</p>
+        ) : null}
         <button className="w-full border border-ink px-6 py-3 text-[0.7rem] uppercase tracking-[0.18em] transition-colors duration-300 ease-[var(--ease-out-soft)] hover:bg-ink hover:text-ivory">
           Sign in
         </button>
