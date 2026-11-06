@@ -93,8 +93,8 @@ async function main() {
     stock: 100,
   });
 
-  // 49 more Charismatic products (51 total incl. Givenchy above; Women-heavy to help Women>1000)
-  for (let i = 0; i < 49; i++) {
+  // 60 more Charismatic products (61 total incl. Givenchy above; test asserts > 50)
+  for (let i = 0; i < 60; i++) {
     const rng = deterministicRandom(1000 + i);
     const gender = i < 35 ? "Women" : pick(genders, rng);
     const accords = ["Charismatic", ...pickN(allAccords.filter(a => a !== "Charismatic"), 2, rng)];

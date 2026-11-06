@@ -40,7 +40,7 @@ jobs:
         run: npm ci
 
       - name: Enable pg_trgm extension
-        run: PGPASSWORD=shopify psql -h localhost -U shopify -d shopify -f init-extensions.sql
+        run: PGPASSWORD=shopify psql -h localhost -U shopify -d shopify -f ../init-extensions.sql
 
       - name: Push schema
         run: npm run db:push
