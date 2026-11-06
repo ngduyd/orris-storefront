@@ -29,11 +29,15 @@ export default async function AccountLogin({ searchParams }: { searchParams: Pro
           <input name="password" type="password" required autoComplete="current-password" className="mt-2 w-full border border-line bg-transparent px-3 py-2.5 text-sm focus:border-ink focus:outline-none" />
         </label>
         {error === "slow" ? (
-          <p className="text-sm text-brass">Quá nhiều lần thử. Đợi 15 phút rồi thử lại.</p>
+          <p className="text-sm text-brass">Too many attempts. Try again in 15 minutes.</p>
+        ) : error === "google" ? (
+          <p className="text-sm text-brass">Google sign-in is unavailable. Use email and password instead.</p>
+        ) : error === "state" ? (
+          <p className="text-sm text-brass">That sign-in link expired. Try again.</p>
         ) : error ? (
           <p className="text-sm text-brass">Wrong email or password.</p>
         ) : null}
-        {reset ? <p className="text-sm text-taupe">Đã đổi mật khẩu — đăng nhập lại.</p> : null}
+        {reset ? <p className="text-sm text-taupe">Password changed — sign in again.</p> : null}
         <button className="w-full border border-ink px-6 py-3 text-[0.7rem] uppercase tracking-[0.18em] transition-colors duration-300 ease-[var(--ease-out-soft)] hover:bg-ink hover:text-ivory">
           Sign in
         </button>

@@ -4,8 +4,8 @@ import { resetAction } from "@/actions/account";
 export const metadata = { title: "New password" };
 
 const MESSAGES: Record<string, string> = {
-  format: "Mật khẩu phải từ 8 ký tự.",
-  expired: "Link đã dùng hoặc hết hạn — yêu cầu link mới.",
+  format: "Password must be at least 8 characters.",
+  expired: "That link was already used or has expired — request a new one.",
 };
 
 export default async function ResetPage({ searchParams }: { searchParams: Promise<{ token?: string; error?: string }> }) {

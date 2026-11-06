@@ -19,7 +19,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
           </button>
         </form>
       ) : (
-        <p className="mt-6 text-sm text-brass">Link không hợp lệ hoặc đã hết hạn.</p>
+        <p className="mt-6 text-sm text-brass">That link is invalid or has expired.</p>
       )}
 
       <p className="mt-6 text-sm text-taupe">

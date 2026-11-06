@@ -66,8 +66,8 @@ export async function registerAction(fd: FormData) {
   const token = await issueToken(id, "verify", DAY);
   await sendMail({
     to: parsed.data.email,
-    subject: "Xác thực email ORRIS",
-    text: `Xác nhận địa chỉ email của bạn:\n\n${await origin()}/account/verify?token=${token}\n\nLink hết hạn sau 24 giờ.`,
+    subject: "Verify your ORRIS email",
+    text: `Confirm your email address:\n\n${await origin()}/account/verify?token=${token}\n\nThe link expires in 24 hours.`,
   });
 
   redirect(next);
@@ -93,8 +93,8 @@ export async function forgotAction(fd: FormData) {
     const token = await issueToken(user.id, "reset", HOUR);
     await sendMail({
       to: email,
-      subject: "Đặt lại mật khẩu ORRIS",
-      text: `Mở link để đặt mật khẩu mới:\n\n${await origin()}/account/reset?token=${token}\n\nLink hết hạn sau 1 giờ. Nếu không phải bạn, bỏ qua email này.`,
+      subject: "Reset your ORRIS password",
+      text: `Open the link to set a new password:\n\n${await origin()}/account/reset?token=${token}\n\nThe link expires in 1 hour. If this wasn't you, ignore this email.`,
     });
   }
   redirect("/account/forgot?sent=1");
@@ -123,8 +123,8 @@ export async function resendVerifyAction() {
   const token = await issueToken(user.id, "verify", DAY);
   await sendMail({
     to: user.email,
-    subject: "Xác thực email ORRIS",
-    text: `Xác nhận địa chỉ email của bạn:\n\n${await origin()}/account/verify?token=${token}\n\nLink hết hạn sau 24 giờ.`,
+    subject: "Verify your ORRIS email",
+    text: `Confirm your email address:\n\n${await origin()}/account/verify?token=${token}\n\nThe link expires in 24 hours.`,
   });
   redirect("/account?verify=sent");
 }

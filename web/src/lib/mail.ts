@@ -49,13 +49,13 @@ export async function sendMail({ to, subject, text }: { to: string; subject: str
   const tx = getTransport();
 
   if (!tx) {
-    console.log(`\n--- mail (chưa cấu hình SMTP) ---\nTo: ${to}\nFrom: ${from}\nSubject: ${subject}\n\n${text}\n---\n`);
+    console.log(`\n--- mail (SMTP not configured) ---\nTo: ${to}\nFrom: ${from}\nSubject: ${subject}\n\n${text}\n---\n`);
     return;
   }
 
   try {
     await tx.sendMail({ from, to, subject, text });
   } catch (e) {
-    console.error("gửi mail lỗi:", e instanceof Error ? e.message : e);
+    console.error("sendMail failed:", e instanceof Error ? e.message : e);
   }
 }

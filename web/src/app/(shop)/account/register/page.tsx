@@ -7,8 +7,8 @@ import { currentUser } from "@/lib/auth";
 export const metadata = { title: "Create account" };
 
 const MESSAGES: Record<string, string> = {
-  format: "Email không hợp lệ, hoặc mật khẩu dưới 8 ký tự.",
-  taken: "Email này đã có tài khoản — đăng nhập thay.",
+  format: "Invalid email, or password shorter than 8 characters.",
+  taken: "That email already has an account — sign in instead.",
 };
 
 export default async function AccountRegister({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
@@ -19,7 +19,7 @@ export default async function AccountRegister({ searchParams }: { searchParams: 
     <div className="mx-auto flex min-h-[70vh] max-w-sm flex-col justify-center px-5 py-16 sm:px-8">
       <p className="label">Account</p>
       <h1 className="mt-3 font-serif text-3xl font-light">Create account</h1>
-      <p className="mt-3 text-sm text-ink-soft">Đơn guest trước đây dùng cùng email sẽ tự hiện trong lịch sử.</p>
+      <p className="mt-3 text-sm text-ink-soft">Guest orders placed with the same email will appear in your history.</p>
 
       <GoogleButton next={next ?? "/account"} />
 

@@ -66,7 +66,7 @@ export default async function AdminAudit({ searchParams }: { searchParams: Promi
         </tbody>
       </table>
 
-      {!items.length ? <p className="mt-6 text-sm text-taupe">Chưa có ghi nhận nào.</p> : null}
+      {!items.length ? <p className="mt-6 text-sm text-taupe">Nothing recorded yet.</p> : null}
 
       {pages > 1 ? (
         <nav className="mt-8 flex items-center justify-between">

@@ -44,7 +44,7 @@ export default async function AdminStats() {
           </tbody>
         </table>
       ) : (
-        <p className="mt-4 text-sm text-taupe">Chưa có đơn nào trong 14 ngày.</p>
+        <p className="mt-4 text-sm text-taupe">No orders in the last 14 days.</p>
       )}
 
       <h2 className="label mt-12">Top houses by revenue</h2>
@@ -68,7 +68,7 @@ export default async function AdminStats() {
           </tbody>
         </table>
       ) : (
-        <p className="mt-4 text-sm text-taupe">Chưa có dữ liệu — doanh số tính trên đơn đã thanh toán.</p>
+        <p className="mt-4 text-sm text-taupe">No data yet — sales are counted on paid orders.</p>
       )}
     </div>
   );

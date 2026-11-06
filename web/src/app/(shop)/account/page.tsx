@@ -30,17 +30,17 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
       {me?.verified ? null : (
         <div className="mt-8 flex flex-wrap items-center gap-4 border border-line bg-ivory-deep px-4 py-3">
-          <p className="text-sm text-ink-soft">Email chưa xác thực.</p>
+          <p className="text-sm text-ink-soft">Your email is not verified yet.</p>
           <form action={resendVerifyAction}>
             <button className="label min-h-6 text-brass hover:text-ink">
-              {verify === "sent" ? "Đã gửi lại — kiểm tra hộp thư" : "Gửi lại link"}
+              {verify === "sent" ? "Sent again — check your inbox" : "Resend link"}
             </button>
           </form>
         </div>
       )}
 
-      {verify === "ok" ? <p className="mt-6 text-sm text-brass">Email đã xác thực.</p> : null}
-      {verify === "expired" ? <p className="mt-6 text-sm text-brass">Link xác thực đã hết hạn.</p> : null}
+      {verify === "ok" ? <p className="mt-6 text-sm text-brass">Email verified.</p> : null}
+      {verify === "expired" ? <p className="mt-6 text-sm text-brass">That verification link has expired.</p> : null}
 
       <p className="mt-8 flex gap-6">
         <Link href="/account/wishlist" className="label link-underline text-brass hover:text-ink">Wishlist →</Link>

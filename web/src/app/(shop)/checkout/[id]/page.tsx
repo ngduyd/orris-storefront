@@ -9,11 +9,11 @@ import { usd } from "@/lib/money";
 export const metadata = { title: "Order placed" };
 
 const STEPS = [
-  { status: "pending", label: "Đã đặt" },
-  { status: "paid", label: "Đã thanh toán" },
-  { status: "processing", label: "Đang chuẩn bị" },
-  { status: "shipped", label: "Đang giao" },
-  { status: "delivered", label: "Đã giao" },
+  { status: "pending", label: "Placed" },
+  { status: "paid", label: "Paid" },
+  { status: "processing", label: "Preparing" },
+  { status: "shipped", label: "In transit" },
+  { status: "delivered", label: "Delivered" },
 ];
 const STEP_ORDER = ["pending", "paid", "processing", "shipped", "delivered"];
 
@@ -103,7 +103,7 @@ export default async function OrderPage({
           })}
         </ol>
         {order.status === "cancelled" || order.status === "refunded" ? (
-          <p className="mt-3 text-sm text-brass">Đơn đã {order.status === "cancelled" ? "huỷ" : "hoàn tiền"}.</p>
+          <p className="mt-3 text-sm text-brass">This order was {order.status === "cancelled" ? "cancelled" : "refunded"}.</p>
         ) : null}
       </div>
 

@@ -24,7 +24,7 @@ export function ProductCard({ p, priority = false, wished = false, back = "/shop
         <input type="hidden" name="handle" value={p.handle} />
         <input type="hidden" name="back" value={back} />
         <button
-          aria-label={wished ? `Bỏ ${p.title} khỏi yêu thích` : `Lưu ${p.title} vào yêu thích`}
+          aria-label={wished ? `Remove ${p.title} from wishlist` : `Save ${p.title} to wishlist`}
           className={`grid size-9 place-items-center bg-ivory/85 text-base leading-none backdrop-blur transition-colors duration-300 ease-[var(--ease-out-soft)] hover:bg-ivory ${wished ? "text-brass" : "text-taupe hover:text-ink"}`}
         >
           {wished ? "♥" : "♡"}

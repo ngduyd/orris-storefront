@@ -89,7 +89,7 @@ export default async function AdminOrderDetail({
           Update shipment
         </button>
         <p className="w-full text-xs text-taupe">
-          {manager ? "Quản lí và vận chuyển đều dùng được." : "Vai trò vận chuyển chỉ cập nhật được phần này."}
+          {manager ? "Managers and carriers can both update this." : "The carrier role can only update this section."}
         </p>
       </form>
 
@@ -103,7 +103,7 @@ export default async function AdminOrderDetail({
             </select>
           </label>
           <button className="border border-ink px-6 py-2.5 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">Save</button>
-          <span className="text-xs text-taupe">paid = true khi status là paid/shipped/delivered</span>
+          <span className="text-xs text-taupe">paid becomes true for status paid/processing/shipped/delivered</span>
         </form>
       ) : null}
     </div>

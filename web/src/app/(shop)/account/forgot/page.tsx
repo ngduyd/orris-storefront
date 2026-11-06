@@ -13,7 +13,7 @@ export default async function ForgotPage({ searchParams }: { searchParams: Promi
 
       {sent ? (
         <p className="mt-6 text-sm text-ink-soft">
-          Nếu email này có tài khoản, link đặt lại mật khẩu đã được gửi. Link hết hạn sau 1 giờ.
+          If an account exists for that email, a reset link is on its way. The link expires in 1 hour.
         </p>
       ) : (
         <form action={forgotAction} className="mt-8 space-y-4">
@@ -21,7 +21,7 @@ export default async function ForgotPage({ searchParams }: { searchParams: Promi
             <span className="label">Email</span>
             <input name="email" type="email" required autoComplete="email" className="mt-2 w-full border border-line bg-transparent px-3 py-2.5 text-sm focus:border-ink focus:outline-none" />
           </label>
-          {error ? <p className="text-sm text-brass">Email không hợp lệ.</p> : null}
+          {error ? <p className="text-sm text-brass">That email doesn't look valid.</p> : null}
           <button className="w-full border border-ink px-6 py-3 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
             Send reset link
           </button>

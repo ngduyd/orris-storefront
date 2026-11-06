@@ -12,22 +12,22 @@ export async function sendBill(orderId: string, origin: string) {
     .join("\n");
 
   const text = [
-    `Cảm ơn bạn đã đặt hàng tại ORRIS.`,
+    `Thank you for your order at ORRIS.`,
     ``,
-    `Đơn: ${order.id.slice(0, 8)}`,
-    `Ngày: ${order.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC`,
+    `Order: ${order.id.slice(0, 8)}`,
+    `Date: ${order.createdAt.toISOString().slice(0, 16).replace("T", " ")} UTC`,
     ``,
     lines,
     ``,
-    `Tổng: ${usd(order.totalMinor)}`,
+    `Total: ${usd(order.totalMinor)}`,
     ``,
-    `Giao đến: ${order.customerName}`,
+    `Ship to: ${order.customerName}`,
     order.address,
     ``,
-    `Xem đơn và trạng thái vận chuyển: ${origin}/checkout/${order.id}`,
+    `View your order and shipping status: ${origin}/checkout/${order.id}`,
     ``,
-    `Đây là hoá đơn cho đơn hàng đã thanh toán. Mọi câu hỏi: trả lời email này.`,
+    `This is your receipt for a paid order. Questions? Just reply to this email.`,
   ].join("\n");
 
-  await sendMail({ to: order.email, subject: `Hoá đơn ORRIS · đơn ${order.id.slice(0, 8)}`, text });
+  await sendMail({ to: order.email, subject: `ORRIS receipt · order ${order.id.slice(0, 8)}`, text });
 }

@@ -45,7 +45,7 @@ export default async function WishlistPage() {
                 <Link href={`/product/${p.handle}`} className="link-underline">{p.title}</Link>
                 <p className="mt-1 text-xs text-taupe">
                   {p.sizeMl} ml · {usd(p.priceMinor)}
-                  {p.status !== "active" ? " · không còn bán" : ""}
+                  {p.status !== "active" ? " · no longer sold" : ""}
                 </p>
               </div>
               <form action={toggleWishlistAction}>
@@ -58,8 +58,8 @@ export default async function WishlistPage() {
         </ul>
       ) : (
         <p className="mt-8 text-sm text-taupe">
-          Chưa lưu chai nào.{" "}
-          <Link href="/shop" className="link-underline text-ink">Xem bộ sưu tập</Link>
+          Nothing saved yet.{" "}
+          <Link href="/shop" className="link-underline text-ink">Browse the collection</Link>
         </p>
       )}
     </div>

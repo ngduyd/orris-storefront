@@ -40,7 +40,7 @@ export default async function AdminProductEdit({
       </div>
 
       {saved ? <p className="mt-6 text-sm text-brass">Saved.</p> : null}
-      {error ? <p className="mt-6 text-sm text-brass">Kiểm tra lại giá và tồn kho (số không âm).</p> : null}
+      {error ? <p className="mt-6 text-sm text-brass">Check price and stock (both non-negative).</p> : null}
 
       <form action={saveProductAction} className="mt-8 grid gap-5 border-t border-line pt-6 sm:grid-cols-3">
         <input type="hidden" name="handle" value={p.handle} />
