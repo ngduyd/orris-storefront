@@ -1,0 +1,31 @@
+# dữ liệu: không commit (CSV, ảnh gốc, ảnh đã chuẩn hoá, manifest upload)
+data/
+.pgdata/
+
+# bí mật
+.env
+.env.*
+!.env.example
+.env.cloudinary
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# web (build/artefacts của app)
+web/node_modules/
+web/.next/
+web/out/
+web/coverage/
+web/next-env.d.ts
+web/public/images
+web/.codegraph/
+web/.serena/
+
+# index của tool
+.codegraph/
+.serena/
+
+# repo git cũ của create-next-app (đã chuyển sang repo gốc)
+web/.git.orig/
