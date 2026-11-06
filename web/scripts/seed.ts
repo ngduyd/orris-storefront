@@ -1,0 +1,64 @@
+/** data/processed/products.csv -> bảng products. Chạy lại an toàn (upsert theo handle). */
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { parse } from "csv-parse/sync";
+import { sql } from "drizzle-orm";
+import { db } from "../src/db";
+import { products } from "../src/db/schema";
+
+const CSV = join(process.cwd(), "..", "data/processed/products.csv");
+const IMG_DIR = join(process.cwd(), "..", "data", "images_norm");
+// tên file local là <handle>.<ext>, ext lấy theo magic bytes lúc tải nên phải dò thật
+const images = new Map(readdirSync(IMG_DIR).map((f) => [f.slice(0, f.lastIndexOf(".")), f]));
+const split = (s: string) => (s ? s.split("|").map((x) => x.trim()).filter(Boolean) : []);
+
+const rows = (parse(readFileSync(CSV, "utf8"), { columns: true, skip_empty_lines: true }) as Record<string, string>[])
+  .map((r) => ({
+    handle: r.handle,
+    title: r.title,
+    brand: r.brand,
+    gender: r.gender,
+    concentration: r.concentration || null,
+    family: r.family || null,
+    accords: split(r.accords),
+    notes: { top: split(r.notes_top), mid: split(r.notes_mid), base: split(r.notes_base) },
+    sizeMl: Number(r.size_ml),
+    priceMinor: Math.round(Number(r.price_sar) * 100),
+    rating: r.rating ? r.rating : null,
+    ratingCount: r.rating_count ? Number(r.rating_count) : null,
+    year: r.year ? Number(r.year) : null,
+    description: r.description || null,
+    // ảnh nguồn hỏng (1 SKU) -> để draft, không hiện trên storefront
+    image: images.get(r.handle) ?? "",
+    status: (images.has(r.handle) ? "active" : "draft") as "active" | "draft",
+    stock: 100,
+  }));
+
+async function main() {
+  for (let i = 0; i < rows.length; i += 500) {
+    await db
+      .insert(products)
+      .values(rows.slice(i, i + 500))
+      .onConflictDoUpdate({
+        target: products.handle,
+        set: {
+          title: sql`excluded.title`,
+          brand: sql`excluded.brand`,
+          priceMinor: sql`excluded.price_minor`,
+          image: sql`excluded.image`,
+          status: sql`excluded.status`,
+          stock: sql`excluded.stock`,
+          updatedAt: new Date(),
+        },
+      });
+  }
+  // xoá SKU không còn trong CSV (pipeline lọc thêm) để DB khớp nguồn
+  await db.delete(products).where(sql`${products.handle} <> all(${sql.raw(`array[${rows.map((r) => `'${r.handle.replace(/'/g, "''")}'`).join(",")}]`)})`);
+
+  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(products);
+  if (n !== rows.length) throw new Error(`DB có ${n}, CSV có ${rows.length}`);
+  console.log(`seeded ${n} products`);
+  process.exit(0);
+}
+
+main();
