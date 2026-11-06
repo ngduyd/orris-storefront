@@ -1,0 +1,6 @@
+{
+  "mcpServers": {
+    "context7": { "exposure": "direct" },
+    "obsidian": { "enabled": false }
+  }
+}
