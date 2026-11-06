@@ -1,0 +1,12 @@
+node_modules
+.next
+.env*
+.codegraph
+.serena
+public/images
+coverage
+*.log
+.DS_Store
+drizzle
+playwright-report
+test-results

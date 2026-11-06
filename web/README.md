@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ORRIS storefront (app)
 
-## Getting Started
+Next.js 16 · React 19 · Tailwind 4 · Drizzle + Postgres · Stripe test mode · SMTP · Google OAuth.
 
-First, run the development server:
+## Local dev
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd web
+npm ci
+cp ../.env.example ../.env.local      # rồi điền giá trị thật
+npm run db:push                       # tạo bảng (cần pg_trgm)
+npm run db:seed                       # nạp catalog từ ../data/processed/products.csv (không có trong repo)
+npm run db:admin                      # tạo tài khoản quản lí từ ADMIN_EMAIL/ADMIN_PASSWORD
+npx next dev -p 3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Catalog CSV và ảnh **không** nằm trong repo (xem `.gitignore`: `data/`). Muốn có dữ liệu thật, chạy pipeline ở `../scripts/` trước, hoặc dùng `scripts/seed-test.ts` (fixture 2.986 SKU tổng hợp cho CI).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production bằng Docker
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cp .env.example .env          # điền DATABASE_URL bỏ qua, compose tự dựng từ POSTGRES_*
+docker compose -f docker-compose.prod.yml up -d --build
+```
 
-## Learn More
+Compose chạy 3 service: `db` (postgres 16 + `init-extensions.sql`), `migrate` (một lần, `drizzle-kit push`, phải xong trước khi app lên), `app` (image `runner`, cổng 3000).
 
-To learn more about Next.js, take a look at the following resources:
+Lần đầu với volume trắng thì `migrate` tạo bảng, nhưng **không có catalog**: nạp bằng
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+docker compose -f docker-compose.prod.yml exec app node -e "1"   # app phải chạy
+docker compose -f docker-compose.prod.yml run --rm migrate npm run db:seed   # cần mount data/
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`db:seed` đọc `../data/processed/products.csv`, mà `data/` không có trong image — mount `./data:/app/data:ro` hoặc nạp từ máy khác.
 
-## Deploy on Vercel
+### Ảnh sản phẩm
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Image **không** chứa `public/images` (symlink vào `data/images_norm`, bị ignore). Production bắt buộc `CLOUDINARY_CLOUD` (`imageUrl()` trả URL Cloudinary). Muốn phục vụ ảnh local, mở comment volume trong `docker-compose.prod.yml`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```yaml
+#   - ./data/images_norm:/app/public/images:ro
+```
+
+## CI/CD
+
+- `.github/workflows/ci.yml` — pull request + push: Postgres 16 service, `pg_trgm`, `seed-test` fixture, `typecheck`, `test`, `build`.
+- `.github/workflows/release.yml` — push `master`: build & push `ghcr.io/<owner>/orris-storefront:sha` + `:latest`; job `deploy` chỉ chạy khi có secret `DEPLOY_SSH_HOST` (kèm `DEPLOY_SSH_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_PATH`), thực hiện `git pull`/`docker compose pull && up -d` trên server.
+
+## Env
+
+Xem `.env.example`. Bắt buộc: `DATABASE_URL`, `CLOUDINARY_CLOUD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Tuỳ chọn: `SMTP_*` + `MAIL_FROM` (không có thì link được in ra console), `GOOGLE_CLIENT_ID/SECRET` (redirect URI `<origin>/api/auth/google/callback`), `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (thiếu thì nút Pay ẩn).
