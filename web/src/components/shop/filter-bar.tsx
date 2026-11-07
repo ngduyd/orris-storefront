@@ -60,8 +60,34 @@ export async function FilterBar({ sp }: { sp: SearchParams }) {
     </>
   );
 
+  const searchBox = (
+    <form action="/shop" className="flex flex-wrap items-center gap-2 pt-5 pb-1">
+      {f.gender ? <input type="hidden" name="gender" value={f.gender} /> : null}
+      {f.brand ? <input type="hidden" name="brand" value={f.brand} /> : null}
+      {f.accord ? <input type="hidden" name="accord" value={f.accord} /> : null}
+      {f.family?.map((v) => <input key={`fam-${v}`} type="hidden" name="family" value={v} />)}
+      {f.size?.map((v) => <input key={`size-${v}`} type="hidden" name="size" value={String(v)} />)}
+      {f.sort && f.sort !== "rating" ? <input type="hidden" name="sort" value={f.sort} /> : null}
+      <input
+        type="search"
+        name="q"
+        defaultValue={f.q ?? ""}
+        placeholder="Search a bottle or a house"
+        aria-label="Search the collection"
+        className="min-w-0 flex-1 border border-line bg-transparent px-3 py-2 text-sm placeholder:text-taupe focus:border-ink focus:outline-none"
+      />
+      <button className="border border-ink px-5 py-2 text-[0.7rem] uppercase tracking-[0.18em] transition-colors duration-300 ease-[var(--ease-out-soft)] hover:bg-ink hover:text-ivory">
+        Search
+      </button>
+      {f.q ? (
+        <Link href={shopHref(f, { q: undefined, page: 1 })} className="label link-underline text-brass">Clear</Link>
+      ) : null}
+    </form>
+  );
+
   return (
     <div className="border-y border-line">
+      {searchBox}
       {/* mobile: collapsed, opened with <details> — no JS */}
       <details className="group md:hidden">
         <summary className="flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
