@@ -37,11 +37,9 @@ services:
       db:
         condition: service_healthy
     env_file:
-      # compose reads .env only to interpolate ${...}; this passes its values into the container
-      - path: .env
-        required: false
-      - path: .env.production
-        required: false
+      # short form on purpose: podman-compose does not understand `- path: ... / required: ...`.
+      # Every value lives in .env; compose also reads it for ${...} interpolation.
+      - .env
     environment:
       # declared in .env; nested defaults like ${A:-${B}} are not expanded by podman-compose
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}

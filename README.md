@@ -113,7 +113,7 @@ deploy job in `release.yml` runs the same script over SSH, so a push to master i
 
 | Variable | Needed for |
 | --- | --- |
-| `DATABASE_URL` | everything. Required by compose; use `@db:5432` inside the stack, `@127.0.0.1:5434` (or a managed host) outside |
+| `DATABASE_URL` | everything. Required by compose; use `@db:5432` inside the stack, `@127.0.0.1:5434` (or a managed host) outside. All values live in `.env` (the app container loads that file) |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | card payment (test keys work) |
 | `CLOUDINARY_URL`, `CLOUDINARY_CLOUD` | admin uploads, product images in production |
 | `SMTP_URL` or `SMTP_HOST/PORT/USER/PASS/SECURE`, `MAIL_FROM` | email; unset means links print to the server log |
