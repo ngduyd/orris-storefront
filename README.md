@@ -1,0 +1,129 @@
+# ORRIS
+
+A fragrance storefront built end to end: catalogue pipeline, Next.js shop, self-hosted admin
+console, Stripe payments, transactional email, and a container image built by CI.
+
+Working demo: <http://100.86.205.2:3000> (tailnet only — private network, not public).
+
+Everything in the UI, code and docs is English. The data is a real Saudi/Gulf fragrance
+catalogue, priced in SAR and displayed in USD.
+
+## What it does
+
+**Shop**
+
+- Landing page, `/shop` with gender / brand / accord / family / size filters, search, sort, pagination
+- Product page: gallery, note pyramid, specs, sale badge, real review average, JSON-LD
+- Wishlist, cart, one-page checkout, order page with a Stripe test-mode payment button
+- Printable invoice, terms, privacy, sitemap, robots, branded 404
+
+**Accounts**
+
+- Email + password (scrypt, own `sessions` table — no auth library), Google OAuth
+- Email verification, password reset, password change, rate limits on every credential path
+- Order history; an order is visible only to its owner, a manager, or a *verified* matching email
+
+**Admin** (`/admin`, three roles: `customer`, `manager`, `carrier`)
+
+- Overview, sales (14 days + top houses), orders (search, status filters, CSV export), products
+  (price, sale price, stock, status, description, multi-image upload), customers, brands,
+  reviews, audit log
+- Carrier role is limited to `/admin/orders` and the shipping form, and a shipment can only move
+  forward: `paid → processing → shipped → delivered`
+
+**Orders and money**
+
+- Stock is held for 35 minutes at checkout and released exactly once on cancel, expiry or refund
+- Stripe Checkout (test mode); the `success_url` confirms the payment itself, the webhook is the
+  safety net for closed tabs; `checkout.session.expired` frees the hold immediately
+- A payment that lands after the hold was released is refunded automatically, never kept silently
+- Coupons (percent off) and a flat shipping fee waived above a threshold
+- Receipt, shipping notice, cancellation and refund emails
+
+## Stack
+
+Next.js 16 (App Router, standalone output) · React 19 · Tailwind 4 · Postgres 16 with Drizzle
+(no ORM wrapper beyond Drizzle, no Prisma) · Stripe · nodemailer · Cloudinary for uploads ·
+Vitest · Docker + GitHub Actions.
+
+## Layout
+
+```
+.
+├── data/               raw + processed catalogue, normalised images  (gitignored, ~110 MB)
+├── scripts/            python pipeline: build_products → download → normalize → upload
+├── docs/superpowers/   spec and plan the build followed
+├── web/                the application (see web/README.md for app-level detail)
+├── init-extensions.sql pg_trgm, mounted by compose
+├── docker-compose.yml  local database only (127.0.0.1:5434)
+├── docker-compose.prod.yml  db + one-shot migrate + app
+└── .github/workflows/  ci.yml (typecheck, tests, build), release.yml (image → ghcr.io)
+```
+
+## Run it
+
+### Local
+
+```bash
+docker compose up -d                    # postgres on 127.0.0.1:5434
+cd web && npm ci
+cp ../.env.example .env.local           # fill in what you need, see below
+npm run db:push && npm run db:seed      # schema, then the catalogue from ../data/processed
+npm run db:admin                        # manager account from ADMIN_EMAIL / ADMIN_PASSWORD
+npx next dev -p 3000
+```
+
+`data/` is not in the repo. Regenerate it with the python pipeline in `scripts/`, or use
+`web/scripts/seed-test.ts` — a 2,986-SKU synthetic fixture that CI uses.
+
+### Docker (production shape)
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+`migrate` runs `drizzle-kit push` once and must finish before `app` starts, so a blank volume
+comes up working. The catalogue still has to be loaded separately (the image does not ship `data/`).
+
+## Environment
+
+| Variable | Needed for |
+| --- | --- |
+| `DATABASE_URL` | everything; compose derives it from `POSTGRES_*` |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | card payment (test keys work) |
+| `CLOUDINARY_URL`, `CLOUDINARY_CLOUD` | admin uploads, product images in production |
+| `SMTP_URL` or `SMTP_HOST/PORT/USER/PASS/SECURE`, `MAIL_FROM` | email; unset means links print to the server log |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in, redirect `<origin>/api/auth/google/callback` |
+| `SHIPPING_FLAT_MINOR`, `FREE_SHIPPING_OVER_MINOR` | shipping fee (SAR minor units, 0 = free) |
+| `SITE_URL` | absolute URLs in `sitemap.xml` and `robots.txt` |
+| `REQUIRE_VERIFIED_EMAIL` | refuse checkout until the address is confirmed (default off) |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | only read by `npm run db:admin` |
+
+## Tests and CI
+
+```bash
+cd web
+npm test          # 78 tests against a real Postgres, no mocks
+npm run typecheck # next typegen + tsc
+npm run build
+```
+
+Coverage: cart arithmetic, filters and search escaping, money/sale maths, order placement
+including a concurrent double submit, reservations and expiry, refunds restoring stock once,
+forward-only shipping, rate-limit windows, single-use tokens, order access rules, webhook
+signature verification, and a guard test asserting every admin action starts with a role check.
+
+CI runs the same sequence on a Postgres service. `release.yml` builds the image and pushes
+`ghcr.io/ngduyd/orris-storefront:{sha,latest}`; the deploy job is skipped until
+`DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER` and `DEPLOY_SSH_KEY` exist as secrets.
+
+## Limits, on purpose
+
+- Single instance. Rate limits live in process memory; the durable parts (stock claims, shipping
+  notices) are enforced in Postgres instead, so no Redis is needed. Add one before scaling out.
+- Card payments are test mode only: Stripe does not onboard merchants in Vietnam.
+- The admin cannot create products — the CSV pipeline is the source of truth, the admin edits
+  price, stock, status, description and images.
+- English only, no i18n or RTL, no analytics or cookie banner (no third-party trackers).
+- `REQUIRE_VERIFIED_EMAIL` is off so the demo stays usable with throwaway addresses.
