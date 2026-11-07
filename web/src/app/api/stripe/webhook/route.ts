@@ -34,7 +34,8 @@ export async function POST(req: Request) {
     const session = event.data.object;
     const orderId = session.metadata?.orderId || session.client_reference_id;
     if (orderId && session.payment_status === "paid") {
-      const first = await markPaid(orderId, session.id);
+      const paymentIntent = typeof session.payment_intent === "string" ? session.payment_intent : null;
+      const first = await markPaid(orderId, session.id, paymentIntent);
       if (first) await sendBill(orderId, originOf(req));
     }
   }

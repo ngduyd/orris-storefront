@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireManager, requireStaff } from "@/lib/auth";
 import { brandExists, getAdminProduct, renameBrand, setOrderStatus, setUserRole, updateProductRow, updateShipping, type OrderStatus } from "@/lib/admin";
+import { cancelOrder, refundOrder } from "@/lib/orders";
 import { writeAudit } from "@/lib/audit";
 import { orderStatus } from "@/db/schema";
 
@@ -130,6 +131,25 @@ export async function saveOrderStatusAction(fd: FormData) {
   await writeAudit({ actorId: actor.id, actorEmail: actor.email, action: "order.status", targetType: "order", targetId: id, detail: `status -> ${status}` });
   revalidatePath("/admin/orders");
   redirect(`/admin/orders/${encodeURIComponent(id)}?saved=1`);
+}
+
+/** Refuses a paid order (that comes back as a refund, not a cancellation) and a second cancel. */
+export async function cancelOrderAction(fd: FormData) {
+  const actor = await requireManager();
+  const id = String(fd.get("id") ?? "");
+  if (!id) redirect("/admin/orders");
+  const ok = await cancelOrder(id, actor.email);
+  revalidatePath("/admin/orders");
+  redirect(`/admin/orders/${encodeURIComponent(id)}?${ok ? "saved=1" : "error=nocancel"}`);
+}
+
+export async function refundOrderAction(fd: FormData) {
+  const actor = await requireManager();
+  const id = String(fd.get("id") ?? "");
+  if (!id) redirect("/admin/orders");
+  const ok = await refundOrder(id, actor.email);
+  revalidatePath("/admin/orders");
+  redirect(`/admin/orders/${encodeURIComponent(id)}?${ok ? "saved=1" : "error=norefund"}`);
 }
 
 /** Carrier (or manager) updates carrier, tracking code and shipping status. */

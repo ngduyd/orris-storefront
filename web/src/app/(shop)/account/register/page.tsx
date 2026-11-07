@@ -9,6 +9,7 @@ export const metadata = { title: "Create account" };
 const MESSAGES: Record<string, string> = {
   format: "Invalid email, or password shorter than 8 characters.",
   taken: "That email already has an account — sign in instead.",
+  slow: "Too many sign-up attempts from this network. Try again in an hour.",
 };
 
 export default async function AccountRegister({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {

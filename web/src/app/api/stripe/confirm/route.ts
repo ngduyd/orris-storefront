@@ -23,7 +23,8 @@ export async function GET(req: Request) {
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     if (session.payment_status === "paid") {
-      const first = await markPaid(orderId, session.id); // false = the webhook already handled it
+      const paymentIntent = typeof session.payment_intent === "string" ? session.payment_intent : null;
+      const first = await markPaid(orderId, session.id, paymentIntent); // false = the webhook already handled it
       if (first) await sendBill(orderId, url.origin);
       return back("");
     }

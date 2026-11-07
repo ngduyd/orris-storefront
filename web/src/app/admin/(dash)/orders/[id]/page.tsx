@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { saveOrderStatusAction, saveShippingAction } from "@/actions/admin";
+import { cancelOrderAction, refundOrderAction, saveOrderStatusAction, saveShippingAction } from "@/actions/admin";
 import { getOrderDetail, type OrderStatus } from "@/lib/admin";
 import { orderStatus } from "@/db/schema";
 import { canManage, requireStaff } from "@/lib/auth";
@@ -13,11 +13,11 @@ export default async function AdminOrderDetail({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string; by?: string }>;
+  searchParams: Promise<{ saved?: string; by?: string; error?: string }>;
 }) {
   const staff = await requireStaff();
   const { id } = await params;
-  const { saved } = await searchParams;
+  const { saved, error } = await searchParams;
   const data = await getOrderDetail(id);
   if (!data) notFound();
   const { order, items } = data;
@@ -31,6 +31,11 @@ export default async function AdminOrderDetail({
         <p className="label">{order.createdAt.toISOString().slice(0, 16).replace("T", " ")}</p>
       </div>
       {saved ? <p className="mt-3 text-sm text-brass">Saved.</p> : null}
+      {error ? (
+        <p className="mt-3 text-sm text-brass">
+          {error === "norefund" ? "Only a paid order can be refunded." : "Only a pending order can be cancelled."}
+        </p>
+      ) : null}
 
       <table className="mt-8 w-full border-collapse text-sm">
         <tbody>
@@ -104,6 +109,26 @@ export default async function AdminOrderDetail({
           </label>
           <button className="border border-ink px-6 py-2.5 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">Save</button>
           <span className="text-xs text-taupe">paid becomes true for status paid/processing/shipped/delivered</span>
+        </form>
+      ) : null}
+
+      {manager && order.status === "pending" ? (
+        <form action={cancelOrderAction} className="mt-8 flex items-center gap-3 border-t border-line pt-6">
+          <input type="hidden" name="id" value={order.id} />
+          <button className="border border-ink px-6 py-2.5 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
+            Cancel order
+          </button>
+          <span className="text-xs text-taupe">Returns the stock to the shelf and marks the order cancelled.</span>
+        </form>
+      ) : null}
+
+      {manager && order.paid ? (
+        <form action={refundOrderAction} className="mt-8 flex items-center gap-3 border-t border-line pt-6">
+          <input type="hidden" name="id" value={order.id} />
+          <button className="border border-ink px-6 py-2.5 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
+            Refund
+          </button>
+          <span className="text-xs text-taupe">Refunds the card when Stripe knows the payment, then returns the stock.</span>
         </form>
       ) : null}
     </div>

@@ -12,7 +12,7 @@ import { signIn, signOut } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { consumeToken, issueToken, pruneTokens } from "@/lib/tokens";
 import { currentUser } from "@/lib/auth";
-import { clearFailures, noteFailure, tooMany } from "@/lib/rate-limit";
+import { clearFailures, clientIp, hit, noteFailure, tooMany } from "@/lib/rate-limit";
 
 const credentials = z.object({
   email: z.email().max(120).transform((v) => v.trim().toLowerCase()),
@@ -50,6 +50,9 @@ export async function registerAction(fd: FormData) {
   const parsed = credentials.safeParse({ email: fd.get("email"), password: fd.get("password") });
   if (!parsed.success) redirect(`/account/register?error=format&next=${encodeURIComponent(next)}`);
 
+  // public sign-up: one address cannot create accounts in a loop
+  if (hit(`register:${await clientIp()}`, 5, HOUR)) redirect(`/account/register?error=slow&next=${encodeURIComponent(next)}`);
+
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, parsed.data.email)).limit(1);
   if (existing) redirect(`/account/register?error=taken&next=${encodeURIComponent(next)}`);
 
@@ -85,6 +88,9 @@ export async function forgotAction(fd: FormData) {
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
   const parsed = z.email().max(120).safeParse(email);
   if (!parsed.success) redirect("/account/forgot?error=format");
+
+  // two limits: the address that floods us, and the one email address being hammered
+  if (hit(`forgot-ip:${await clientIp()}`, 5, HOUR) || hit(`forgot:${email}`, 3, HOUR)) redirect("/account/forgot?error=slow");
 
   const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   // always report success so account existence never leaks

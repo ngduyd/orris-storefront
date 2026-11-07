@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addToCartAction } from "@/actions/cart";
 import { toggleWishlistAction } from "@/actions/wishlist";
 import { NotePyramid } from "@/components/shop/note-pyramid";
+import { ReviewFlash } from "@/components/shop/review-flash";
 import { ProductGallery } from "@/components/shop/product-gallery";
 import { deleteReviewAction, submitReviewAction } from "@/actions/reviews";
 import { listReviews, myReview, purchaseOrderId, reviewStats } from "@/lib/reviews";
@@ -195,6 +197,10 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
             ) : (
               <p className="mt-3 text-sm text-taupe">No store reviews yet.</p>
             )}
+
+            <Suspense fallback={null}>
+              <ReviewFlash />
+            </Suspense>
 
             {bought || mine ? (
             <form action={submitReviewAction} className="mt-6 border border-line p-4">

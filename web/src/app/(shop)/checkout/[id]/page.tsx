@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { payAction } from "@/actions/pay";
+import { cancelMyOrderAction } from "@/actions/order";
 import { getOrder } from "@/lib/orders";
 import { currentUser } from "@/lib/auth";
 import { stripeEnabled } from "@/lib/stripe";
@@ -22,7 +23,7 @@ export default async function OrderPage({
   searchParams,
 }: PageProps<"/checkout/[id]">) {
   const { id } = await params;
-  const { paid, cancel, error } = await searchParams;
+  const { paid, cancel, error, cancelled } = await searchParams;
   const order = await getOrder(id);
   if (!order) notFound();
 
@@ -30,7 +31,7 @@ export default async function OrderPage({
   const owns = viewer && (order.userId === viewer.id || order.email === viewer.email);
   if (!owns && viewer?.role !== "manager") notFound();
 
-  const canPay = stripeEnabled && !order.paid && order.status === "pending";
+  const canPay = stripeEnabled && !order.paid && order.status === "pending" && !order.stockReleased;
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-16 sm:px-8">
@@ -66,7 +67,15 @@ export default async function OrderPage({
         <p className="mt-6 text-sm text-brass">Payment is being confirmed — refresh in a moment.</p>
       ) : null}
       {cancel ? <p className="mt-6 text-sm text-taupe">Payment cancelled. Your order stays pending.</p> : null}
+      {cancelled ? <p className="mt-6 text-sm text-brass">Order cancelled. The items are back in stock.</p> : null}
       {error === "stripe" ? <p className="mt-6 text-sm text-taupe">Card payment is not configured.</p> : null}
+
+      {owns && order.status === "pending" ? (
+        <form action={cancelMyOrderAction} className="mt-6">
+          <input type="hidden" name="orderId" value={order.id} />
+          <button className="label border-b border-taupe pb-1 text-taupe hover:text-ink">Cancel order</button>
+        </form>
+      ) : null}
 
       <ul className="mt-10 divide-y divide-line border-y border-line text-sm">
         {order.items.map((i) => (
