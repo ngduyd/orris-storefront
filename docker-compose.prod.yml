@@ -45,7 +45,8 @@ services:
       PORT: 3000
       HOSTNAME: 0.0.0.0
     ports:
-      - "3000:3000"
+      # only nginx on the host reaches the app; nothing else can hit 3000 directly
+      - "127.0.0.1:3000:3000"
     # volumes:
     #   - ./data/images_norm:/app/public/images:ro
     healthcheck:
