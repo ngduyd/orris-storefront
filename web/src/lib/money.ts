@@ -11,3 +11,11 @@ export const sarNote = (sarMinor: number) => `SAR ${(sarMinor / 100).toLocaleStr
 
 /** SAR minor -> USD minor (Stripe tính bằng cent). */
 export const usdMinor = (sarMinor: number) => Math.round(sarMinor / SAR_PER_USD);
+
+/** Sale khi có giá gốc lớn hơn giá bán. */
+export const onSale = (p: { priceMinor: number; compareAtMinor: number | null }) =>
+  p.compareAtMinor !== null && p.compareAtMinor > p.priceMinor;
+
+/** Phần trăm giảm, làm tròn xuống. */
+export const discountPercent = (p: { priceMinor: number; compareAtMinor: number | null }) =>
+  onSale(p) ? Math.floor(((p.compareAtMinor! - p.priceMinor) / p.compareAtMinor!) * 100) : 0;

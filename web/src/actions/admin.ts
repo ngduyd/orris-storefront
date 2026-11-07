@@ -12,31 +12,100 @@ const PRODUCT_STATUSES = ["draft", "active", "archived"] as const;
 export async function saveProductAction(fd: FormData) {
   const actor = await requireManager();
   const handle = String(fd.get("handle") ?? "");
-  const priceSar = Number(fd.get("price"));
-  const stock = Number(fd.get("stock"));
-  const status = String(fd.get("status") ?? "");
-  if (!handle || !Number.isFinite(priceSar) || priceSar < 0 || !Number.isInteger(stock) || stock < 0) {
-    redirect(`/admin/products/${encodeURIComponent(handle)}?error=1`);
-  }
-  if (!(PRODUCT_STATUSES as readonly string[]).includes(status)) redirect("/admin/products?error=1");
+  const back = `/admin/products/${encodeURIComponent(handle)}`;
+  if (!handle) redirect("/admin/products");
 
-  // giá nhập bằng SAR, DB lưu SAR*100
+  const num = (k: string) => Number(String(fd.get(k) ?? "").replace(",", "."));
+  const priceSar = num("price");
+  const compareSarRaw = String(fd.get("compareAt") ?? "").trim();
+  const compareSar = compareSarRaw === "" ? null : num("compareAt");
+  const stock = Number(fd.get("stock"));
+  const sizeMl = Number(fd.get("sizeMl"));
+  const status = String(fd.get("status") ?? "");
+  const title = String(fd.get("title") ?? "").trim().slice(0, 200);
+  const brand = String(fd.get("brand") ?? "").trim().slice(0, 120);
+  const image = String(fd.get("image") ?? "").trim().slice(0, 200);
+  const description = String(fd.get("description") ?? "").trim().slice(0, 5000) || null;
+
+  const bad =
+    !title || !brand || !image ||
+    !Number.isFinite(priceSar) || priceSar < 0 ||
+    (compareSar !== null && (!Number.isFinite(compareSar) || compareSar < 0)) ||
+    !Number.isInteger(stock) || stock < 0 ||
+    !Number.isInteger(sizeMl) || sizeMl <= 0 ||
+    !(PRODUCT_STATUSES as readonly string[]).includes(status);
+  if (bad) redirect(`${back}?error=1`);
+
   const before = await getAdminProduct(handle);
   await updateProductRow(handle, {
+    title,
+    brand,
+    sizeMl,
     priceMinor: Math.round(priceSar * 100),
+    // compare-at chỉ có nghĩa khi lớn hơn giá bán
+    compareAtMinor: compareSar !== null && Math.round(compareSar * 100) > Math.round(priceSar * 100) ? Math.round(compareSar * 100) : null,
     stock,
     status: status as (typeof PRODUCT_STATUSES)[number],
+    image,
+    description,
   });
+
   await writeAudit({
     actorId: actor.id,
     actorEmail: actor.email,
     action: "product.update",
     targetType: "product",
     targetId: handle,
-    detail: before ? `price ${before.priceMinor / 100} -> ${priceSar} SAR, stock ${before.stock} -> ${stock}, status ${before.status} -> ${status}` : undefined,
+    detail: before
+      ? [
+          before.title !== title ? `title "${before.title}" -> "${title}"` : null,
+          before.brand !== brand ? `brand ${before.brand} -> ${brand}` : null,
+          before.sizeMl !== sizeMl ? `size ${before.sizeMl} -> ${sizeMl}` : null,
+          before.priceMinor !== Math.round(priceSar * 100) ? `price ${before.priceMinor / 100} -> ${priceSar}` : null,
+          before.stock !== stock ? `stock ${before.stock} -> ${stock}` : null,
+          before.status !== status ? `status ${before.status} -> ${status}` : null,
+          before.image !== image ? `image ${before.image} -> ${image}` : null,
+        ].filter(Boolean).join(", ") || "no field changed"
+      : undefined,
   });
+
   revalidatePath("/admin/products");
   revalidatePath(`/product/${handle}`);
+  revalidatePath("/shop");
+  redirect(`${back}?saved=1`);
+}
+
+export async function endSaleAction(fd: FormData) {
+  const actor = await requireManager();
+  const handle = String(fd.get("handle") ?? "");
+  const before = handle ? await getAdminProduct(handle) : null;
+  if (!before) redirect("/admin/products");
+
+  if (before.compareAtMinor !== null && before.compareAtMinor > before.priceMinor) {
+    await updateProductRow(handle, {
+      title: before.title,
+      brand: before.brand,
+      sizeMl: before.sizeMl,
+      priceMinor: before.compareAtMinor,
+      compareAtMinor: null,
+      stock: before.stock,
+      status: before.status,
+      image: before.image,
+      description: before.description,
+    });
+    await writeAudit({
+      actorId: actor.id,
+      actorEmail: actor.email,
+      action: "product.update",
+      targetType: "product",
+      targetId: handle,
+      detail: `sale ended, price ${before.priceMinor / 100} -> ${before.compareAtMinor / 100}`,
+    });
+  }
+
+  revalidatePath("/admin/products");
+  revalidatePath(`/product/${handle}`);
+  revalidatePath("/shop");
   redirect(`/admin/products/${encodeURIComponent(handle)}?saved=1`);
 }
 

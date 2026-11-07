@@ -81,9 +81,19 @@ export async function getAdminProduct(handle: string) {
 
 export async function updateProductRow(
   handle: string,
-  { priceMinor, status, stock }: { priceMinor: number; status: "draft" | "active" | "archived"; stock: number },
+  patch: {
+    title: string;
+    brand: string;
+    sizeMl: number;
+    priceMinor: number;
+    compareAtMinor: number | null;
+    stock: number;
+    status: "draft" | "active" | "archived";
+    image: string;
+    description: string | null;
+  },
 ) {
-  await db.update(products).set({ priceMinor, status, stock, updatedAt: new Date() }).where(eq(products.handle, handle));
+  await db.update(products).set({ ...patch, updatedAt: new Date() }).where(eq(products.handle, handle));
 }
 
 export async function listUsers({ q, role, page }: { q?: string; role?: string; page: number }) {

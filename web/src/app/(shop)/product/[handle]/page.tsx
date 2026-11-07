@@ -8,7 +8,7 @@ import { NotePyramid } from "@/components/shop/note-pyramid";
 import { getProduct } from "@/lib/products";
 import { currentUser } from "@/lib/auth";
 import { isWished } from "@/lib/wishlist";
-import { sarNote, usd } from "@/lib/money";
+import { discountPercent, onSale, sarNote, usd } from "@/lib/money";
 import { imageUrl } from "@/lib/image";
 
 // 3,051 trang SSG làm build treo >15 phút; ISR cho cùng kết quả với build nhanh
@@ -84,7 +84,13 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
           <h1 className="mt-3 font-serif text-4xl leading-tight font-light sm:text-5xl">{p.title}</h1>
 
           <div className="mt-5 flex flex-wrap items-baseline gap-4">
-            <span className="text-lg" title={sarNote(p.priceMinor)}>{usd(p.priceMinor)}</span>
+            <span className={`text-lg ${onSale(p) ? "text-brass" : ""}`} title={sarNote(p.priceMinor)}>{usd(p.priceMinor)}</span>
+            {onSale(p) ? (
+              <>
+                <span className="text-sm text-taupe line-through">{usd(p.compareAtMinor!)}</span>
+                <span className="bg-brass px-2 py-1 text-[0.6rem] uppercase tracking-[0.14em] text-ivory">−{discountPercent(p)}%</span>
+              </>
+            ) : null}
             <span className="text-sm text-taupe">
               {p.sizeMl} ml{p.concentration ? ` · ${p.concentration}` : ""}
               {p.family ? ` · ${p.family}` : ""}

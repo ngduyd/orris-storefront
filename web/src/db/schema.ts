@@ -18,7 +18,8 @@ export const products = pgTable(
     accords: text("accords").array().notNull().default(sql`'{}'::text[]`),
     notes: jsonb("notes").$type<{ top: string[]; mid: string[]; base: string[] }>().notNull(),
     sizeMl: integer("size_ml").notNull(),
-    priceMinor: integer("price_minor").notNull(), // SAR * 100
+    priceMinor: integer("price_minor").notNull(), // SAR * 100 — giá bán thực tế
+    compareAtMinor: integer("compare_at_minor"), // giá gốc trước sale; null = không sale
     rating: numeric("rating", { precision: 2, scale: 1 }),
     ratingCount: integer("rating_count"),
     year: integer("year"),
