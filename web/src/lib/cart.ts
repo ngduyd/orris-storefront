@@ -13,7 +13,7 @@ export type CartLine = {
   stock: number;
 };
 
-/** Tạo cart rỗng với id cho trước; dùng lại nếu đã tồn tại. */
+/** Create an empty cart with the given id; reuse it when it already exists. */
 export async function ensureCart(cartId: string, userId?: string) {
   await db.insert(carts).values({ id: cartId, userId: userId ?? null }).onConflictDoNothing();
   return cartId;
@@ -30,7 +30,7 @@ export async function addLine(cartId: string, handle: string, qty = 1) {
     });
 }
 
-/** qty <= 0 nghĩa là xoá dòng. */
+/** qty <= 0 removes the line. */
 export async function setLine(cartId: string, handle: string, qty: number) {
   if (qty <= 0) return removeLine(cartId, handle);
   await db

@@ -5,7 +5,7 @@ import { isHttps } from "@/lib/cookie-secure";
 
 import { headers } from "next/headers";
 
-/** Origin theo Host thật (tailnet/https), không theo URL nội bộ của Next. */
+/** Origin from the real Host header (tailnet/https), not Next's internal URL. */
 async function requestOrigin(fallback: string) {
   const h = await headers();
   const host = h.get("host") ?? new URL(fallback).host;
@@ -17,7 +17,7 @@ async function requestOrigin(fallback: string) {
 const safeNext = (v: string | null) => (v && v.startsWith("/") && !v.startsWith("//") ? v : "/account");
 
 
-/** Bước 1: sinh state, lưu cookie ngắn hạn, chuyển sang Google. */
+/** Step 1: mint state, store it in a short-lived cookie, redirect to Google. */
 export async function GET(req: Request) {
   if (!googleEnabled) return Response.redirect(new URL("/account/login?error=google", req.url), 302);
 

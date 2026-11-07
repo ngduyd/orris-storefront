@@ -1,11 +1,11 @@
 import nodemailer, { type Transporter } from "nodemailer";
 
 /**
- * SMTP thuần, nên dùng được Resend / Postmark / SES / Gmail app-password / Mailtrap...
+ * Plain SMTP, so Resend / Postmark / SES / Gmail app password / Mailtrap all work.
  * Env (một trong hai kiểu):
  *   SMTP_URL=smtps://user:pass@smtp.example.com:465
  *   hoặc SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE
- * Chưa cấu hình thì in ra console để dev vẫn copy được link xác thực / đặt lại mật khẩu.
+ * When unconfigured it prints to the console so devs can still copy verify / reset links.
  */
 let transport: Transporter | null | undefined;
 
@@ -19,11 +19,11 @@ function getTransport() {
     return transport;
   }
 
-  // timeout ngắn: SMTP sai cấu hình không được treo request đăng ký
+  // short timeouts: a misconfigured SMTP must not hang signup
   const timeouts = { connectionTimeout: 8000, greetingTimeout: 8000, socketTimeout: 15000 };
 
   if (url) {
-    // smtps://user:pass@host:465 -> object; dùng URL form nên không truyền được options rời
+    // smtps://user:pass@host:465 -> object; the URL form cannot take separate options
     const u = new URL(url);
     transport = nodemailer.createTransport({
       host: u.hostname,

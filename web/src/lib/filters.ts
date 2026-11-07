@@ -42,7 +42,7 @@ export function shopHref(f: ListFilters, patch: Partial<ListFilters> = {}) {
   return qs ? `/shop?${qs}` : "/shop";
 }
 
-/** Bật/tắt một giá trị trong filter dạng mảng, luôn reset về trang 1. */
+/** Toggle one value in an array filter, always resetting to page 1. */
 export function toggle<T>(list: T[] | undefined, value: T): T[] {
   const cur = list ?? [];
   return cur.includes(value) ? cur.filter((x) => x !== value) : [...cur, value];

@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-/** Badge số món: đọc cookie `cart_n` để header vẫn static, không phải render động cả site. */
+/** Item count badge: reads the `cart_n` cookie so the header stays static. */
 export function CartCount() {
   const pathname = usePathname();
   const [n, setN] = useState(0);

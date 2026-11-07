@@ -8,7 +8,7 @@ import { exchangeCode, googleEnabled } from "@/lib/google";
 
 import { headers } from "next/headers";
 
-/** Origin theo Host thật (tailnet/https), không theo URL nội bộ của Next. */
+/** Origin from the real Host header (tailnet/https), not Next's internal URL. */
 async function requestOrigin(fallback: string) {
   const h = await headers();
   const host = h.get("host") ?? new URL(fallback).host;
@@ -18,8 +18,8 @@ async function requestOrigin(fallback: string) {
 
 
 /**
- * Bước 2: đổi code lấy profile, tìm hoặc tạo user, mở session.
- * Tài khoản email+mật khẩu cùng email sẽ được nối vào Google (email Google đã xác thực).
+ * Step 2: exchange the code for a profile, find or create the user, open a session.
+ * An existing password account with the same email is linked to Google (Google verified that email).
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);

@@ -27,7 +27,7 @@ const ORDER: Record<Sort, SQL> = {
   title: asc(products.title),
 };
 
-/** Người dùng gõ `%` hay `_` vào ô search không được biến thành wildcard. */
+/** `%` or `_` typed into search must not become a wildcard. */
 const like = (s: string) => s.replace(/[\\%_]/g, (m) => `\\${m}`);
 
 function where(f: ListFilters) {

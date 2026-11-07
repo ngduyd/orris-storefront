@@ -31,7 +31,7 @@ export async function listWishlist(userId: string) {
   return db.select({ handle: wishlist.handle, addedAt: wishlist.createdAt }).from(wishlist).where(eq(wishlist.userId, userId)).orderBy(desc(wishlist.createdAt));
 }
 
-/** Tập handle đã lưu trong số handle đang hiển thị — 1 query cho cả lưới. */
+/** Saved handles among the handles on screen — one query for the whole grid. */
 export async function wishedIn(userId: string | null | undefined, handles: string[]) {
   if (!userId || !handles.length) return new Set<string>();
   const rows = await db

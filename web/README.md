@@ -7,36 +7,35 @@ Next.js 16 · React 19 · Tailwind 4 · Drizzle + Postgres · Stripe test mode �
 ```bash
 cd web
 npm ci
-cp ../.env.example ../.env.local      # rồi điền giá trị thật
-npm run db:push                       # tạo bảng (cần pg_trgm)
-npm run db:seed                       # nạp catalog từ ../data/processed/products.csv (không có trong repo)
-npm run db:admin                      # tạo tài khoản quản lí từ ADMIN_EMAIL/ADMIN_PASSWORD
+cp ../.env.example ../.env.local      # then fill in real values
+npm run db:push                       # create tables (needs pg_trgm)
+npm run db:seed                       # load the catalog from ../data/processed/products.csv (not in the repo)
+npm run db:admin                      # create the manager account from ADMIN_EMAIL/ADMIN_PASSWORD
 npx next dev -p 3000
 ```
 
-Catalog CSV và ảnh **không** nằm trong repo (xem `.gitignore`: `data/`). Muốn có dữ liệu thật, chạy pipeline ở `../scripts/` trước, hoặc dùng `scripts/seed-test.ts` (fixture 2.986 SKU tổng hợp cho CI).
+The catalog CSV and images are **not** in the repo (see `.gitignore`: `data/`). To get real data, run the pipeline in `../scripts/` first, or use `scripts/seed-test.ts` (a 2,986-SKU synthetic fixture used by CI).
 
-## Production bằng Docker
+## Production with Docker
 
 ```bash
-cp .env.example .env          # điền DATABASE_URL bỏ qua, compose tự dựng từ POSTGRES_*
+cp .env.example .env          # DATABASE_URL can be skipped: compose derives it from POSTGRES_*
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Compose chạy 3 service: `db` (postgres 16 + `init-extensions.sql`), `migrate` (một lần, `drizzle-kit push`, phải xong trước khi app lên), `app` (image `runner`, cổng 3000).
+Compose runs three services: `db` (postgres 16 + `init-extensions.sql`), `migrate` (one shot, `drizzle-kit push`, must finish before the app starts) and `app` (the `runner` image, port 3000).
 
-Lần đầu với volume trắng thì `migrate` tạo bảng, nhưng **không có catalog**: nạp bằng
+On a fresh volume `migrate` creates the schema but there is **no catalog**:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec app node -e "1"   # app phải chạy
-docker compose -f docker-compose.prod.yml run --rm migrate npm run db:seed   # cần mount data/
+docker compose -f docker-compose.prod.yml run --rm migrate npm run db:seed   # needs ./data mounted
 ```
 
-`db:seed` đọc `../data/processed/products.csv`, mà `data/` không có trong image — mount `./data:/app/data:ro` hoặc nạp từ máy khác.
+`db:seed` reads `../data/processed/products.csv`, and `data/` is not inside the image — mount `./data:/app/data:ro` or load it from another machine.
 
-### Ảnh sản phẩm
+### Images
 
-Image **không** chứa `public/images` (symlink vào `data/images_norm`, bị ignore). Production bắt buộc `CLOUDINARY_CLOUD` (`imageUrl()` trả URL Cloudinary). Muốn phục vụ ảnh local, mở comment volume trong `docker-compose.prod.yml`:
+The image does **not** contain `public/images` (a symlink into `data/images_norm`, which is ignored). Production requires `CLOUDINARY_CLOUD` — `imageUrl()` returns Cloudinary URLs. To serve local files instead, uncomment the volume in `docker-compose.prod.yml`:
 
 ```yaml
 #   - ./data/images_norm:/app/public/images:ro
@@ -44,9 +43,9 @@ Image **không** chứa `public/images` (symlink vào `data/images_norm`, bị i
 
 ## CI/CD
 
-- `.github/workflows/ci.yml` — pull request + push: Postgres 16 service, `pg_trgm`, `seed-test` fixture, `typecheck`, `test`, `build`.
-- `.github/workflows/release.yml` — push `master`: build & push `ghcr.io/<owner>/orris-storefront:sha` + `:latest`; job `deploy` chỉ chạy khi có secret `DEPLOY_SSH_HOST` (kèm `DEPLOY_SSH_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_PATH`), thực hiện `git pull`/`docker compose pull && up -d` trên server.
+- `.github/workflows/ci.yml` — pull requests and pushes: Postgres 16 service, `pg_trgm`, `seed-test` fixture, `typecheck`, `test`, `build`.
+- `.github/workflows/release.yml` — on push to `master`: build and push `ghcr.io/<owner>/orris-storefront:sha` plus `:latest`; the `deploy` job runs only when `DEPLOY_SSH_HOST` exists (with `DEPLOY_SSH_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_PATH`) and pulls the new image on the server.
 
-## Env
+## Environment
 
-Xem `.env.example`. Bắt buộc: `DATABASE_URL`, `CLOUDINARY_CLOUD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Tuỳ chọn: `SMTP_*` + `MAIL_FROM` (không có thì link được in ra console), `GOOGLE_CLIENT_ID/SECRET` (redirect URI `<origin>/api/auth/google/callback`), `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (thiếu thì nút Pay ẩn).
+See `.env.example`. Required: `DATABASE_URL`, `CLOUDINARY_CLOUD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Optional: `SMTP_*` + `MAIL_FROM` (links are printed to the server console when unset), `GOOGLE_CLIENT_ID/SECRET` (redirect URI `<origin>/api/auth/google/callback`), `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (the pay button is hidden without them).

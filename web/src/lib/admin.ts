@@ -101,24 +101,30 @@ export async function listUsers({ q, role, page }: { q?: string; role?: string; 
     role ? eq(users.role, role) : undefined,
     q ? ilike(users.email, `%${q}%`) : undefined,
   );
+
+  // join thay vì subquery: trong subquery, `email` bị Postgres hiểu là orders.email
+  const base = db
+    .select({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+      name: users.name,
+      provider: users.provider,
+      verified: users.emailVerifiedAt,
+      createdAt: users.createdAt,
+      orders: sql<number>`count(distinct ${orders.id})::int`,
+      spent: sql<number>`coalesce(sum(${orders.totalMinor}) filter (where ${orders.paid}), 0)::int`,
+    })
+    .from(users)
+    .leftJoin(orders, or(eq(orders.userId, users.id), eq(orders.email, users.email)))
+    .where(where)
+    .groupBy(users.id)
+    .orderBy(desc(users.createdAt))
+    .limit(ADMIN_PAGE_SIZE)
+    .offset((page - 1) * ADMIN_PAGE_SIZE);
+
   const [items, [c]] = await Promise.all([
-    db
-      .select({
-        id: users.id,
-        email: users.email,
-        role: users.role,
-        name: users.name,
-        provider: users.provider,
-        verified: users.emailVerifiedAt,
-        createdAt: users.createdAt,
-        orders: sql<number>`(select count(*)::int from orders o where o.user_id = ${users.id} or o.email = ${users.email})`,
-        spent: sql<number>`(select coalesce(sum(total_minor),0)::int from orders o where o.paid and (o.user_id = ${users.id} or o.email = ${users.email}))`,
-      })
-      .from(users)
-      .where(where)
-      .orderBy(desc(users.createdAt))
-      .limit(ADMIN_PAGE_SIZE)
-      .offset((page - 1) * ADMIN_PAGE_SIZE),
+    base,
     db.select({ n: sql<number>`count(*)::int` }).from(users).where(where),
   ]);
   return { items, total: c.n, pages: Math.max(1, Math.ceil(c.n / ADMIN_PAGE_SIZE)) };
@@ -128,7 +134,7 @@ export async function setUserRole(id: string, role: "customer" | "manager" | "ca
   await db.update(users).set({ role }).where(eq(users.id, id));
 }
 
-/** Doanh số: chỉ tính đơn đã trả. */
+/** Sales: paid orders only. */
 export async function salesStats() {
   const [totals] = await db
     .select({
@@ -184,7 +190,7 @@ export async function brandExists(name: string) {
   return Boolean(row);
 }
 
-/** Đổi tên brand trên mọi sản phẩm (gộp luôn nếu tên mới đã tồn tại). */
+/** Rename a brand across every product (merges when the new name already exists). */
 export async function renameBrand(from: string, to: string) {
   const rows = await db.update(products).set({ brand: to, updatedAt: new Date() }).where(eq(products.brand, from)).returning({ handle: products.handle });
   return rows.length;

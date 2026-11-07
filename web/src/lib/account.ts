@@ -3,8 +3,8 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 
 /**
- * Đơn của tài khoản = đơn gắn userId + đơn guest trước đây dùng cùng email.
- * Nhờ vậy khách đặt hàng trước khi tạo tài khoản vẫn thấy lịch sử.
+ * Account orders = orders carrying userId + guest orders previously placed with the same email.
+ * So a customer who ordered before signing up still sees the history.
  */
 export async function listOrdersFor(user: { id: string; email: string }, limit = 50) {
   return db

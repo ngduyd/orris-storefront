@@ -36,7 +36,7 @@ export async function saveProductAction(fd: FormData) {
     !Number.isInteger(sizeMl) || sizeMl <= 0 ||
     !(PRODUCT_STATUSES as readonly string[]).includes(status);
   if (bad) redirect(`${back}?error=1`);
-  // brand lạ chỉ được tạo khi tick xác nhận, tránh gõ sai thành brand mới
+  // an unknown brand may only be created when explicitly confirmed, so typos do not spawn brands
   if (!(await brandExists(brand)) && !allowNewBrand) redirect(`${back}?error=brand`);
 
   const before = await getAdminProduct(handle);
@@ -45,7 +45,7 @@ export async function saveProductAction(fd: FormData) {
     brand,
     sizeMl,
     priceMinor: Math.round(priceSar * 100),
-    // compare-at chỉ có nghĩa khi lớn hơn giá bán
+    // compare-at only means something when it exceeds the sale price
     compareAtMinor: compareSar !== null && Math.round(compareSar * 100) > Math.round(priceSar * 100) ? Math.round(compareSar * 100) : null,
     stock,
     status: status as (typeof PRODUCT_STATUSES)[number],
@@ -123,7 +123,7 @@ export async function saveOrderStatusAction(fd: FormData) {
   redirect(`/admin/orders/${encodeURIComponent(id)}?saved=1`);
 }
 
-/** Vận chuyển (hoặc quản lí) cập nhật đơn vị vận chuyển + mã vận đơn + trạng thái giao. */
+/** Carrier (or manager) updates carrier, tracking code and shipping status. */
 export async function saveShippingAction(fd: FormData) {
   const staff = await requireStaff();
   const id = String(fd.get("id") ?? "");
@@ -172,7 +172,7 @@ export async function saveUserRoleAction(fd: FormData) {
   const role = String(fd.get("role") ?? "");
   const allowed = ["customer", "manager", "carrier"] as const;
   if (!id || !(allowed as readonly string[]).includes(role)) redirect("/admin/users?error=1");
-  if (id === actor.id) redirect("/admin/users?error=self"); // không tự hạ quyền mình
+  if (id === actor.id) redirect("/admin/users?error=self"); // never demote yourself
 
   await setUserRole(id, role as (typeof allowed)[number]);
   await writeAudit({ actorId: actor.id, actorEmail: actor.email, action: "user.role", targetType: "user", targetId: id, detail: `role -> ${role}` });

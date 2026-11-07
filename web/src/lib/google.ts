@@ -1,7 +1,7 @@
 /**
- * Google OAuth 2.0 authorization-code flow, không cần thư viện.
+ * Google OAuth 2.0 authorization-code flow, no library needed.
  * Env: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
- * Redirect URI phải khai báo đúng: <origin>/api/auth/google/callback
+ * Redirect URI must be registered exactly: <origin>/api/auth/google/callback
  */
 const AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN = "https://oauth2.googleapis.com/token";
@@ -41,8 +41,8 @@ export async function exchangeCode(origin: string, code: string): Promise<Google
   const { id_token: idToken } = (await res.json()) as { id_token?: string };
   if (!idToken) return null;
 
-  // id_token đến trực tiếp từ Google qua TLS nên chỉ cần đọc payload
-  // (verify chữ ký là bắt buộc khi token đi qua kênh khác)
+  // id_token comes straight from Google over TLS, so decoding the payload is enough
+  // (signature verification is mandatory when the token travels any other channel)
   const payload = JSON.parse(Buffer.from(idToken.split(".")[1], "base64url").toString()) as {
     sub?: string;
     email?: string;

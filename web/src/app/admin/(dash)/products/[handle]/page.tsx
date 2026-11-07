@@ -53,7 +53,7 @@ export default async function AdminProductEdit({
       {saved ? <p className="mt-6 text-sm text-brass">Saved.</p> : null}
       {error === "brand" ? (
         <p className="mt-6 text-sm text-brass">
-          Brand này chưa có trong catalog. Tick “create new brand” nếu thật sự muốn tạo.
+          This brand is not in the catalog yet. Tick “create new brand” if you really mean it.
         </p>
       ) : error ? (
         <p className="mt-6 text-sm text-brass">Check the fields: price/stock/size non-negative, title/brand/image required, compare-at only counts when above price.</p>
@@ -100,10 +100,10 @@ export default async function AdminProductEdit({
             step="0.01"
             min="0"
             defaultValue={p.compareAtMinor === null ? "" : (p.compareAtMinor / 100).toFixed(2)}
-            placeholder="bỏ trống = không sale"
+            placeholder="empty = no sale"
             className={field}
           />
-          <span className="mt-1 block text-xs text-taupe">Điền giá gốc lớn hơn giá sale để bật sale; bỏ trống = giá thường.</span>
+          <span className="mt-1 block text-xs text-taupe">Enter a regular price above the sale price to start a sale; empty = no sale.</span>
         </label>
 
         <label className="block">
@@ -121,9 +121,9 @@ export default async function AdminProductEdit({
         </label>
 
         <label className="block sm:col-span-2">
-          <span className="label">Image (file name in Cloudinary, public_id = bỏ phần mở rộng)</span>
+          <span className="label">Image file name (Cloudinary public_id without extension)</span>
           <input name="image" required defaultValue={p.image} className={field} />
-          <span className="mt-1 block text-xs text-taupe">Tên file phải tồn tại trên Cloudinary (public_id = tên không đuôi).</span>
+          <span className="mt-1 block text-xs text-taupe">The file must already exist on Cloudinary (public_id = name without extension).</span>
         </label>
 
         <label className="block sm:col-span-2">

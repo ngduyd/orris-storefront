@@ -1,9 +1,9 @@
 import { headers } from "next/headers";
 
 /**
- * `secure` phải theo giao thức thật của request, không theo NODE_ENV.
- * `next start` đặt NODE_ENV=production, nên nếu dựa vào nó thì cookie bị browser
- * từ chối khi xem qua http://<tailnet-ip>:3000 (localhost vẫn lọt nên test dễ sai).
+ * `secure` must follow the request protocol, not NODE_ENV.
+ * `next start` sets NODE_ENV=production, so keying off it makes the browser
+ * drop the cookie on http://<tailnet-ip>:3000 (localhost still works, which hides the bug in tests).
  */
 export async function isHttps() {
   const h = await headers();

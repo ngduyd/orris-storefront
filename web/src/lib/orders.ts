@@ -10,8 +10,8 @@ export type PlaceOrderResult =
   | { ok: false; error: "EMPTY_CART" | "OUT_OF_STOCK" };
 
 /**
- * Tạo đơn pending. Giá LUÔN đọc từ DB tại thời điểm đặt, không nhận từ client.
- * Trừ stock, xoá giỏ, tất cả trong 1 transaction.
+ * Create a pending order. Prices ALWAYS come from the DB at checkout time, never from the client.
+ * Decrement stock and clear the cart in one transaction.
  */
 export async function placeOrder({ cartId, email, name, address, userId }: PlaceOrderInput): Promise<PlaceOrderResult> {
   return db.transaction(async (tx) => {
@@ -74,7 +74,7 @@ export async function getOrder(id: string) {
   return { ...order, items };
 }
 
-/** Webhook gọi: chỉ đơn còn pending mới đổi, tránh ghi đè cancelled/refunded. */
+/** Called by the webhook: only pending orders flip, so cancelled/refunded are never overwritten. */
 export async function markPaid(orderId: string, stripeId: string) {
   const updated = await db
     .update(orders)

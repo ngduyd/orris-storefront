@@ -11,8 +11,8 @@ import { usdMinor } from "@/lib/money";
 import { stripe } from "@/lib/stripe";
 
 /**
- * Tạo Stripe Checkout (test mode) cho đơn đã có. Giá đọc từ DB, không nhận từ client.
- * Đơn vẫn `pending` cho tới khi webhook xác nhận.
+ * Create a Stripe Checkout session (test mode) for an existing order. Prices come from the DB.
+ * The order stays `pending` until the webhook confirms payment.
  */
 export async function payAction(fd: FormData) {
   const orderId = String(fd.get("orderId") ?? "");
@@ -22,7 +22,7 @@ export async function payAction(fd: FormData) {
   const viewer = await currentUser();
   const order = await getOrder(orderId);
   if (!order) redirect("/shop");
-  // server action gọi được trực tiếp: phải tự kiểm quyền, không tin trang đã chặn
+  // server actions can be called directly: check permissions here, do not trust the page
   if (!viewer || (order.userId !== viewer.id && order.email !== viewer.email)) redirect("/shop");
   if (order.paid) redirect(`/checkout/${orderId}`);
 
@@ -37,7 +37,7 @@ export async function payAction(fd: FormData) {
       quantity: i.qty,
       price_data: {
         currency: "usd",
-        unit_amount: usdMinor(i.priceMinor), // SAR minor -> cent, giống giá hiển thị
+        unit_amount: usdMinor(i.priceMinor), // SAR minor -> cents, matching the displayed price
         product_data: { name: i.title },
       },
     })),

@@ -23,7 +23,7 @@ export async function addToCartAction(fd: FormData) {
   await addLine(cartId, handle, Math.max(1, int(fd, "qty", 1)));
   await setCountCookie(cartId);
   refresh();
-  redirect("/cart"); // phản hồi rõ ràng: không có JS thì đây là tín hiệu duy nhất
+  redirect("/cart"); // explicit feedback: with no JS this is the only signal the customer gets
 }
 
 export async function setQtyAction(fd: FormData) {

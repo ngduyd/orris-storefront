@@ -1,6 +1,6 @@
 const CLOUD = process.env.CLOUDINARY_CLOUD;
 
-/** Ảnh catalog: Cloudinary khi có CLOUDINARY_CLOUD, không thì file local trong public/images. */
+/** Catalog images: Cloudinary when CLOUDINARY_CLOUD is set, otherwise local files in public/images. */
 export function imageUrl(name: string, width = 800): string {
   if (!name) return "";
   if (!CLOUD) return `/images/${name}`;

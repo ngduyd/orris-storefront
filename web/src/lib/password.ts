@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 
-/** `scrypt:<salt hex>:<key hex>` — không phụ thuộc Next nên script seed dùng được. */
+/** `scrypt:<salt hex>:<key hex>` — no Next dependency, so seed scripts can use it. */
 export async function hashPassword(pw: string) {
   const salt = randomBytes(16);
   const key = await scrypt(pw, salt, 64);

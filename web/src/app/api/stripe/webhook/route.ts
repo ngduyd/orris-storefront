@@ -16,15 +16,15 @@ export async function POST(req: Request) {
   const signature = req.headers.get("stripe-signature");
   if (!signature) return new Response("missing signature", { status: 400 });
 
-  // phải là raw body: ký trên đúng bytes Stripe gửi
+  // must be the raw body: the signature covers the exact bytes Stripe sent
   const body = await req.text();
 
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(body, signature, secret);
   } catch (e) {
-    // sai secret (thường do whsec của `stripe listen` khác trong env) — log để thấy ngay
-    console.warn("stripe webhook: chữ ký không hợp lệ:", e instanceof Error ? e.message.slice(0, 120) : e);
+    // wrong secret (usually `stripe listen` printing a different whsec than the env) — log it loudly
+    console.warn("stripe webhook: invalid signature:", e instanceof Error ? e.message.slice(0, 120) : e);
     return new Response("bad signature", { status: 400 });
   }
 

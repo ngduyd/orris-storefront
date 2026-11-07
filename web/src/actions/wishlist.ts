@@ -9,7 +9,7 @@ export async function toggleWishlistAction(fd: FormData) {
   const handle = String(fd.get("handle") ?? "");
   const back = String(fd.get("back") ?? "/shop");
   const user = await currentUser();
-  // chưa đăng nhập: đưa qua login rồi quay lại đúng trang
+  // not signed in: go through login and come back to the same page
   if (!user) redirect(`/account/login?next=${encodeURIComponent(back)}`);
   if (!handle) return;
 

@@ -62,7 +62,7 @@ export async function FilterBar({ sp }: { sp: SearchParams }) {
 
   return (
     <div className="border-y border-line">
-      {/* mobile: gập lại, mở bằng <details> — không cần JS */}
+      {/* mobile: collapsed, opened with <details> — no JS */}
       <details className="group md:hidden">
         <summary className="flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
           <span className="label flex items-center gap-2 text-ink">

@@ -78,7 +78,7 @@ export async function logoutAction() {
   redirect("/");
 }
 
-// alias cũ để không phải sửa chỗ khác
+// backward-compatible alias so callers stay unchanged
 export const customerLogoutAction = logoutAction;
 
 export async function forgotAction(fd: FormData) {
@@ -87,7 +87,7 @@ export async function forgotAction(fd: FormData) {
   if (!parsed.success) redirect("/account/forgot?error=format");
 
   const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
-  // luôn báo thành công: không để lộ email nào có tài khoản
+  // always report success so account existence never leaks
   if (user) {
     await pruneTokens();
     const token = await issueToken(user.id, "reset", HOUR);
@@ -109,7 +109,7 @@ export async function resetAction(fd: FormData) {
   if (!userId) redirect("/account/reset?error=expired");
 
   await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, userId));
-  await db.delete(sessions).where(eq(sessions.userId, userId)); // đổi mật khẩu = đăng xuất mọi nơi
+  await db.delete(sessions).where(eq(sessions.userId, userId)); // changing the password signs the account out everywhere
   redirect("/account/login?reset=1");
 }
 

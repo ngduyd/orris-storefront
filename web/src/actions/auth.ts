@@ -9,13 +9,13 @@ export async function loginAction(fd: FormData) {
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
   const password = String(fd.get("password") ?? "");
 
-  // URL public: chặn dò mật khẩu
+  // public URL: block password guessing
   const key = `staff:${email}`;
   if (tooMany(key)) redirect("/admin/login?error=slow");
 
   const user = await signIn(email, password);
 
-  // khách đăng nhập ở đây sẽ bị đẩy vòng lặp, nên chặn ngay
+  // a customer signing in here would loop back, so reject immediately
   if (!user || (user.role !== "manager" && user.role !== "carrier")) {
     noteFailure(key);
     if (user) await signOut();

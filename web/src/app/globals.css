@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ORRIS — luxury tối giản. Chỉ light theme; ivory nền, espresso chữ, brass làm accent duy nhất. */
+/* ORRIS — minimal luxury. Light theme only; ivory ground, espresso ink, brass as the single accent. */
 @theme {
   --color-ivory: #f7f4ef;
   --color-ivory-deep: #efe9e1;
@@ -60,7 +60,7 @@
   animation: orris-fade 0.6s var(--ease-out-soft) both;
 }
 
-/* gạch chân trượt từ trái, dùng cho nav và link chữ */
+/* underline that slides in from the left, used for nav and text links */
 @utility link-underline {
   background-image: linear-gradient(currentColor, currentColor);
   background-size: 0% 1px;
@@ -98,4 +98,14 @@
   .fade-in { animation: none; }
   .link-underline { transition: none; }
   * { transition-duration: 0.01ms !important; }
+}
+
+/* Admin tables: give columns breathing room (site has no other tables) */
+main table th,
+main table td {
+  padding-right: 1.5rem;
+}
+main table th:last-child,
+main table td:last-child {
+  padding-right: 0;
 }

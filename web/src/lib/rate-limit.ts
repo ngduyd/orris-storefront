@@ -1,6 +1,6 @@
 /**
- * Giới hạn thử đăng nhập theo bộ nhớ tiến trình.
- * ponytail: 1 instance, reset khi restart. Đổi sang Redis khi chạy nhiều bản.
+ * Login attempt limiter kept in process memory.
+ * ponytail: single instance, resets on restart. Move to Redis when running more than one copy.
  */
 const hits = new Map<string, { n: number; until: number }>();
 

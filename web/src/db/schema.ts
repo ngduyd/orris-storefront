@@ -5,7 +5,7 @@ import {
 
 export const statusEnum = pgEnum("product_status", ["draft", "active", "archived"]);
 
-/** 1 dòng = 1 SKU (brand + tên + dung tích). PK tự nhiên là handle vì URL dùng handle. */
+/** One row = one SKU (brand + name + size). The natural PK is the handle because URLs use it. */
 export const products = pgTable(
   "products",
   {
@@ -18,13 +18,13 @@ export const products = pgTable(
     accords: text("accords").array().notNull().default(sql`'{}'::text[]`),
     notes: jsonb("notes").$type<{ top: string[]; mid: string[]; base: string[] }>().notNull(),
     sizeMl: integer("size_ml").notNull(),
-    priceMinor: integer("price_minor").notNull(), // SAR * 100 — giá bán thực tế
-    compareAtMinor: integer("compare_at_minor"), // giá gốc trước sale; null = không sale
+    priceMinor: integer("price_minor").notNull(), // SAR * 100 — actual selling price
+    compareAtMinor: integer("compare_at_minor"), // regular price before the sale; null = no sale
     rating: numeric("rating", { precision: 2, scale: 1 }),
     ratingCount: integer("rating_count"),
     year: integer("year"),
     description: text("description"),
-    image: text("image").notNull(), // tên file trong data/images, ext khác nhau (jpg/png)
+    image: text("image").notNull(), // file name under data/images, extensions vary (jpg/png)
     status: statusEnum("status").notNull().default("active"),
     stock: integer("stock").notNull().default(100),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -60,13 +60,13 @@ export const users = pgTable(
     role: text("role").notNull().default("customer"), // customer | manager | carrier
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     provider: text("provider"), // null = email+password; "google" = OAuth
-    providerId: text("provider_id"), // sub của provider
+    providerId: text("provider_id"), // provider subject id
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("users_email_idx").on(t.email), uniqueIndex("users_provider_idx").on(t.provider, t.providerId)],
 );
 
-/** Token một lần: đổi mật khẩu và xác thực email. PK là SHA-256 của token, không lưu token gốc. */
+/** Single-use tokens for password reset and email verification. The PK is the token's SHA-256, the raw token is never stored. */
 export const tokens = pgTable(
   "tokens",
   {
@@ -78,7 +78,7 @@ export const tokens = pgTable(
   (t) => [index("tokens_user_idx").on(t.userId)],
 );
 
-/** Ai làm gì, khi nào — chỉ ghi, không sửa. */
+/** Who did what, when — append only. */
 export const auditLogs = pgTable(
   "audit_logs",
   {
@@ -138,7 +138,7 @@ export const orders = pgTable(
     status: orderStatus("status").notNull().default("pending"),
     totalMinor: integer("total_minor").notNull(),
     currency: text("currency").notNull().default("SAR"),
-    carrier: text("carrier"), // đơn vị vận chuyển
+    carrier: text("carrier"), // shipping company
     trackingCode: text("tracking_code"),
     stripeId: text("stripe_id"),
     paid: boolean("paid").notNull().default(false),

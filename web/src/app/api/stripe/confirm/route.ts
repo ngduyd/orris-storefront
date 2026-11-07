@@ -3,8 +3,8 @@ import { sendBill } from "@/lib/bill";
 import { stripe } from "@/lib/stripe";
 
 /**
- * success_url của Stripe trỏ vào đây: xác nhận thanh toán bằng cách hỏi thẳng Stripe,
- * không chờ webhook (webhook vẫn là nguồn chính thức cho trường hợp user đóng tab).
+ * Stripe's success_url points here: confirm payment by asking Stripe directly,
+ * instead of waiting for the webhook (which stays authoritative when the tab is closed).
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     if (session.payment_status === "paid") {
-      const first = await markPaid(orderId, session.id); // false = webhook đã xử lý trước đó
+      const first = await markPaid(orderId, session.id); // false = the webhook already handled it
       if (first) await sendBill(orderId, url.origin);
       return back("");
     }

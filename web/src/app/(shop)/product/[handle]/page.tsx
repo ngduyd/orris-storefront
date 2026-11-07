@@ -11,7 +11,7 @@ import { isWished } from "@/lib/wishlist";
 import { discountPercent, onSale, sarNote, usd } from "@/lib/money";
 import { imageUrl } from "@/lib/image";
 
-// 3,051 trang SSG làm build treo >15 phút; ISR cho cùng kết quả với build nhanh
+// prerendering 3,051 pages hung the build for >15 minutes; ISR gives the same output quickly
 export const revalidate = 3600;
 export const dynamicParams = true;
 
@@ -34,7 +34,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
   const viewer = await currentUser();
   const wished = await isWished(viewer?.id, p.handle);
 
-  // mỗi thông số trỏ về trang lọc tương ứng
+  // each spec links to its matching filter page
   const specLink = (k: string, v: string) => {
     const href =
       k === "House" ? `/shop?brand=${encodeURIComponent(v)}`

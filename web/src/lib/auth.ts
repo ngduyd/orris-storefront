@@ -11,7 +11,7 @@ import { isHttps } from "@/lib/cookie-secure";
 export const SESSION_COOKIE = "orris_admin";
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Đăng nhập cho mọi tài khoản (admin lẫn khách). Quyền kiểm ở nơi dùng. */
+/** Sign-in for any account (manager or customer). Roles are checked by callers. */
 export async function signIn(email: string, password: string) {
   const [user] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
   if (!user?.passwordHash) return null;
@@ -21,7 +21,7 @@ export async function signIn(email: string, password: string) {
   return user;
 }
 
-/** Dùng chung cho mật khẩu và OAuth. */
+/** Shared by password and OAuth sign-in. */
 export async function createSession(userId: string) {
   const id = randomBytes(32).toString("hex");
   await db.insert(sessions).values({ id, userId, expiresAt: new Date(Date.now() + TTL_MS) });
@@ -42,7 +42,7 @@ export async function signOut() {
   jar.delete(SESSION_COOKIE);
 }
 
-/** Bất kỳ tài khoản đã đăng nhập (kể cả khách). */
+/** Any signed-in account, customers included. */
 export async function currentUser() {
   const id = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!id) return null;
@@ -73,7 +73,7 @@ export async function currentAdmin() {
   return row ?? null;
 }
 
-/** Nhân viên: quản lí (manager) hoặc vận chuyển (carrier). */
+/** Staff: manager or carrier. */
 export async function currentStaff() {
   const u = await currentUser();
   return u && (u.role === "manager" || u.role === "carrier") ? u : null;
@@ -85,7 +85,7 @@ export async function requireStaff() {
   return staff;
 }
 
-/** Chỉ quản lí: sửa sản phẩm, đổi trạng thái đơn, xem doanh số. */
+/** Managers only: edit products, change order status, read sales. */
 export async function requireManager() {
   const staff = await requireStaff();
   if (staff.role !== "manager") redirect("/admin/orders?denied=1");

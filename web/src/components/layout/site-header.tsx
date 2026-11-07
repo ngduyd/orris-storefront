@@ -9,7 +9,7 @@ const NAV = [
   { href: "/shop?gender=Unisex", label: "Unisex" },
   { href: "/shop", label: "All" },
 ];
-// desktop đã có "Account" bên phải; hàng nav mobile cần thêm vì cột phải bị ẩn
+// desktop already shows "Account" on the right; the mobile nav row needs its own entry
 const MOBILE_NAV = [...NAV, { href: "/account", label: "Account" }];
 
 export async function SiteHeader() {
@@ -43,7 +43,7 @@ export async function SiteHeader() {
         </div>
       </div>
 
-      {/* mobile: nav cuộn ngang, không cần hamburger */}
+      {/* mobile: horizontally scrollable nav, no hamburger needed */}
       <nav className="flex gap-6 overflow-x-auto border-t border-line px-5 py-3 sm:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {MOBILE_NAV.map((n) => (
           <Link key={n.href} href={n.href} className="label link-underline inline-flex min-h-6 shrink-0 items-center hover:text-ink">

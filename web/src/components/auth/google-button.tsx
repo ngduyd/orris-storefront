@@ -1,6 +1,6 @@
 import { googleEnabled } from "@/lib/google";
 
-/** Nút Google là link thường: không cần JS, không cần client component. */
+/** Google button is a plain link: no JS, no client component needed. */
 export function GoogleButton({ next }: { next: string }) {
   if (!googleEnabled) return null;
   return (

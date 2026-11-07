@@ -2,7 +2,7 @@ import { getOrder } from "@/lib/orders";
 import { sendMail } from "@/lib/mail";
 import { usd } from "@/lib/money";
 
-/** Hoá đơn gửi sau khi đơn được xác nhận thanh toán. Lỗi mail không được làm hỏng luồng. */
+/** Receipt sent once payment is confirmed. A mail failure must not break the flow. */
 export async function sendBill(orderId: string, origin: string) {
   const order = await getOrder(orderId);
   if (!order) return;
