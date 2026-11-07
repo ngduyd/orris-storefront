@@ -130,6 +130,9 @@ export default async function OrderPage({
       <Link href="/shop" className="label mt-12 inline-block border-b border-brass pb-1 text-brass">
         Keep browsing
       </Link>
+      <Link href={`/checkout/${order.id}/invoice`} className="label mt-6 block border-b border-line pb-1 text-ink-soft hover:text-ink">
+        Print invoice
+      </Link>
     </div>
   );
 }

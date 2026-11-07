@@ -28,6 +28,7 @@ export default async function AdminOrderDetail({
       <Link href="/admin/orders" className="label link-underline hover:text-ink">← Orders</Link>
       <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-serif text-3xl font-light">Order {order.id.slice(0, 8)}</h1>
+        <Link href={`/checkout/${order.id}/invoice`} className="label link-underline hover:text-ink">Invoice</Link>
         <p className="label">{order.createdAt.toISOString().slice(0, 16).replace("T", " ")}</p>
       </div>
       {saved ? <p className="mt-3 text-sm text-brass">Saved.</p> : null}

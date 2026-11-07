@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ADMIN_PAGE_SIZE, listOrders, type OrderStatus } from "@/lib/admin";
+import { canManage, requireStaff } from "@/lib/auth";
 import { releaseExpiredReservations } from "@/lib/orders";
 import { orderStatus } from "@/db/schema";
 import { usd } from "@/lib/money";
@@ -13,13 +14,19 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
   // a manager opening the list sweeps the holds that already ran out, so stock comes back
   await releaseExpiredReservations();
   const { items, total, pages } = await listOrders({ status, page });
+  const staff = await requireStaff();
   const qs = (s?: OrderStatus) => (s ? `/admin/orders?status=${s}` : "/admin/orders");
 
   return (
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-serif text-3xl font-light">Orders</h1>
-        <p className="label">{total.toLocaleString("en-US")} total · page {page}</p>
+        <div className="flex items-center gap-6">
+          <p className="label">{total.toLocaleString("en-US")} total · page {page}</p>
+          {canManage(staff.role) ? (
+            <Link href="/admin/orders/export" prefetch={false} className="label link-underline hover:text-ink">Export CSV</Link>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
