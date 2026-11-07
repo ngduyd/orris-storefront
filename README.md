@@ -88,6 +88,10 @@ docker build -f web/Dockerfile --target migrator -t ghcr.io/ngduyd/orris-storefr
 docker compose -f docker-compose.prod.yml up -d
 ```
 
+If you set `DATABASE_URL` in `.env.production`, that is what the app and the migration use — the
+`POSTGRES_*` variables only configure the bundled `db` container, so keep the two describing the
+same database (or drop `db` and point `DATABASE_URL` at a managed one).
+
 `docker-compose.prod.yml` only pulls: it has no `build:` at all, so a deploy can never ship a
 tree that was not built by CI. `release.yml` publishes two tags per commit — `latest` (the
 runner) and `migrator` (the same Dockerfile with drizzle-kit for `db:push`).
@@ -99,7 +103,7 @@ comes up working. The catalogue still has to be loaded separately (the image doe
 
 | Variable | Needed for |
 | --- | --- |
-| `DATABASE_URL` | everything; compose derives it from `POSTGRES_*` |
+| `DATABASE_URL` | everything. Declared, it wins; unset, compose derives it from `POSTGRES_*` |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | card payment (test keys work) |
 | `CLOUDINARY_URL`, `CLOUDINARY_CLOUD` | admin uploads, product images in production |
 | `SMTP_URL` or `SMTP_HOST/PORT/USER/PASS/SECURE`, `MAIL_FROM` | email; unset means links print to the server log |

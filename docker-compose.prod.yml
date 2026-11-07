@@ -25,7 +25,8 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-shopify}:${POSTGRES_PASSWORD:-shopify}@db:5432/${POSTGRES_DB:-shopify}
+      # an explicit DATABASE_URL in .env.production wins; otherwise it is derived from POSTGRES_*
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-shopify}:${POSTGRES_PASSWORD:-shopify}@db:5432/${POSTGRES_DB:-shopify}}
 
   app:
     image: ${ORRIS_IMAGE:-ghcr.io/ngduyd/orris-storefront:latest}
@@ -38,7 +39,8 @@ services:
       - path: .env.production
         required: false
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-shopify}:${POSTGRES_PASSWORD:-shopify}@db:5432/${POSTGRES_DB:-shopify}
+      # an explicit DATABASE_URL in .env.production wins; otherwise it is derived from POSTGRES_*
+      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-shopify}:${POSTGRES_PASSWORD:-shopify}@db:5432/${POSTGRES_DB:-shopify}}
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
