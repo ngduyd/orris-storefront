@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addToCartAction } from "@/actions/cart";
 import { toggleWishlistAction } from "@/actions/wishlist";
 import { NotePyramid } from "@/components/shop/note-pyramid";
+import { ProductGallery } from "@/components/shop/product-gallery";
 import { getProduct } from "@/lib/products";
 import { currentUser } from "@/lib/auth";
 import { isWished } from "@/lib/wishlist";
@@ -67,16 +67,10 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
 
       <div className="mt-8 grid gap-12 md:grid-cols-2 md:gap-16">
         <div className="md:sticky md:top-28 md:self-start">
-          <div className="relative aspect-4/5 bg-ivory-deep">
-            <Image
-              src={imageUrl(p.image, 1200)}
-              alt={`${p.brand} ${p.title}`}
-              fill
-              sizes="(min-width:768px) 50vw, 100vw"
-              priority
-              className="fade-in object-contain p-10"
-            />
-          </div>
+          <ProductGallery
+            alt={`${p.brand} ${p.title}`}
+            images={(p.images.length ? p.images : [p.image]).map((name) => ({ name, url: imageUrl(name, 1200) }))}
+          />
         </div>
 
         <div>
