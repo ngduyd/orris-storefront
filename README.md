@@ -3,8 +3,6 @@
 A fragrance storefront built end to end: catalogue pipeline, Next.js shop, self-hosted admin
 console, Stripe payments, transactional email, and a container image built by CI.
 
-Working demo: <http://100.86.205.2:3000> (tailnet only — private network, not public).
-
 Everything in the UI, code and docs is English. The data is a real Saudi/Gulf fragrance
 catalogue, priced in SAR and displayed in USD.
 
