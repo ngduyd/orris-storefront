@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { currentCart } from "@/lib/cart-cookie";
+import { attachCartUser } from "@/lib/cart";
 import { currentUser } from "@/lib/auth";
 import { placeOrder } from "@/lib/orders";
 
@@ -23,6 +24,8 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
 
   const { cartId } = await currentCart();
   if (!cartId) return { error: "Your bag is empty." };
+
+  await attachCartUser(cartId, user.id);
 
   const res = await placeOrder({ cartId, email: user.email, userId: user.id, ...parsed.data });
   if (!res.ok) {

@@ -15,7 +15,7 @@ const MOBILE_NAV = [...NAV, { href: "/account", label: "Account" }];
 export async function SiteHeader() {
   const staff = await currentStaff();
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-ivory/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-line bg-ivory/90 backdrop-blur print:hidden">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5 sm:h-16 sm:px-8">
         <Link href="/" aria-label="ORRIS home">
           <Wordmark />
@@ -57,7 +57,7 @@ export async function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="mt-24 border-t border-line">
+    <footer className="mt-24 border-t border-line print:hidden">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 py-12 sm:flex-row sm:items-end sm:justify-between sm:px-8">
         <div>
           <Wordmark />
@@ -65,6 +65,10 @@ export function SiteFooter() {
             A curated house of fragrance. Notes, accords and houses, edited.
           </p>
         </div>
+        <nav className="flex flex-wrap gap-6">
+          <Link href="/terms" className="label link-underline hover:text-ink">Terms</Link>
+          <Link href="/privacy" className="label link-underline hover:text-ink">Privacy</Link>
+        </nav>
         <p className="label">Every bottle · every house</p>
       </div>
     </footer>

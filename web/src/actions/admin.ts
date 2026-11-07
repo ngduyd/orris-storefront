@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireManager, requireStaff } from "@/lib/auth";
+import { sendShippingNotice } from "@/lib/bill";
 import { brandExists, getAdminProduct, renameBrand, setOrderStatus, setUserRole, updateProductRow, updateShipping, type OrderStatus } from "@/lib/admin";
 import { writeAudit } from "@/lib/audit";
 import { orderStatus } from "@/db/schema";
@@ -143,6 +145,11 @@ export async function saveShippingAction(fd: FormData) {
   if (!id || !allowed.includes(status)) redirect("/admin/orders?error=1");
 
   await updateShipping(id, { carrier: carrier || null, trackingCode: trackingCode || null, status: status as OrderStatus });
+  // the customer hears about a shipment only once it actually leaves / arrives
+  if (status === "shipped" || status === "delivered") {
+    const h = await headers();
+    await sendShippingNotice(id, h.get("origin") ?? `http://${h.get("host")}`);
+  }
   await writeAudit({
     actorId: staff.id,
     actorEmail: staff.email,

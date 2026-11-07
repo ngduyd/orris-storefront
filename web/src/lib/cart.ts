@@ -19,6 +19,11 @@ export async function ensureCart(cartId: string, userId?: string) {
   return cartId;
 }
 
+/** Tie the anonymous cart to the signed-in buyer. */
+export async function attachCartUser(cartId: string, userId: string) {
+  await db.update(carts).set({ userId }).where(eq(carts.id, cartId));
+}
+
 export async function addLine(cartId: string, handle: string, qty = 1) {
   await ensureCart(cartId);
   await db
