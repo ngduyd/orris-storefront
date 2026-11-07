@@ -37,6 +37,9 @@ services:
       db:
         condition: service_healthy
     env_file:
+      # compose reads .env only to interpolate ${...}; this passes its values into the container
+      - path: .env
+        required: false
       - path: .env.production
         required: false
     environment:
