@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cancelOrderAction, refundOrderAction, saveOrderStatusAction, saveShippingAction } from "@/actions/admin";
 import { getOrderDetail, type OrderStatus } from "@/lib/admin";
-import { orderStatus } from "@/db/schema";
 import { canManage, requireStaff } from "@/lib/auth";
 import { usd } from "@/lib/money";
 
 const SHIPPING_STATUSES: OrderStatus[] = ["processing", "shipped", "delivered"];
+// cancel and refund are separate buttons: they restore stock and move money, a dropdown must not
+const STATUS_OPTIONS: OrderStatus[] = ["pending", "paid", "processing", "shipped", "delivered"];
 
 export default async function AdminOrderDetail({
   params,
@@ -34,7 +35,13 @@ export default async function AdminOrderDetail({
       {saved ? <p className="mt-3 text-sm text-brass">Saved.</p> : null}
       {error ? (
         <p className="mt-3 text-sm text-brass">
-          {error === "norefund" ? "Only a paid order can be refunded." : "Only a pending order can be cancelled."}
+          {error === "norefund"
+            ? "Only a paid order can be refunded."
+            : error === "nosharef"
+              ? "Cancel and refund live on their own buttons — they restore stock and move money."
+              : error === "shipping"
+                ? "Carrier details can only change on a paid, processing, shipped or delivered order."
+                : "Only a pending order can be cancelled."}
         </p>
       ) : null}
 
@@ -104,8 +111,8 @@ export default async function AdminOrderDetail({
           <input type="hidden" name="id" value={order.id} />
           <label className="block">
             <span className="label">Order status (manager)</span>
-            <select name="status" defaultValue={order.status} className="mt-2 block border border-line bg-transparent px-3 py-2 text-sm focus:border-ink focus:outline-none">
-              {orderStatus.enumValues.map((s) => <option key={s} value={s}>{s}</option>)}
+            <select name="status" defaultValue={STATUS_OPTIONS.includes(order.status) ? order.status : "pending"} className="mt-2 block border border-line bg-transparent px-3 py-2 text-sm focus:border-ink focus:outline-none">
+              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
           <button className="border border-ink px-6 py-2.5 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">Save</button>

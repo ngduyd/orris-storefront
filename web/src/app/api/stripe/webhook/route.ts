@@ -1,6 +1,5 @@
 import type Stripe from "stripe";
-import { markPaid } from "@/lib/orders";
-import { sendBill } from "@/lib/bill";
+import { confirmSessionPaid } from "@/lib/bill";
 import { stripe } from "@/lib/stripe";
 
 /** Webhook Stripe (test mode): stripe listen --forward-to localhost:3000/api/stripe/webhook */
@@ -35,8 +34,9 @@ export async function POST(req: Request) {
     const orderId = session.metadata?.orderId || session.client_reference_id;
     if (orderId && session.payment_status === "paid") {
       const paymentIntent = typeof session.payment_intent === "string" ? session.payment_intent : null;
-      const first = await markPaid(orderId, session.id, paymentIntent);
-      if (first) await sendBill(orderId, originOf(req));
+      const outcome = await confirmSessionPaid(orderId, session.id, paymentIntent, originOf(req));
+      // 500 makes Stripe retry: an event is never acknowledged while the money is neither kept nor refunded
+      if (outcome === "failed") return new Response("confirm failed", { status: 500 });
     }
   }
 

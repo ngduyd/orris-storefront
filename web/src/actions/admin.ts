@@ -9,6 +9,7 @@ import { sendShippingNotice } from "@/lib/bill";
 import {
   brandExists,
   getAdminProduct,
+  getOrderDetail,
   renameBrand,
   setOrderStatus,
   setReviewHidden,
@@ -139,6 +140,8 @@ export async function saveOrderStatusAction(fd: FormData) {
   const id = String(fd.get("id") ?? "");
   const status = String(fd.get("status") ?? "");
   if (!id || !(orderStatus.enumValues as readonly string[]).includes(status)) redirect("/admin/orders");
+  // cancelled/refunded restore stock and move money: only cancelOrder/refundOrder may do that
+  if (status === "cancelled" || status === "refunded") redirect(`/admin/orders/${encodeURIComponent(id)}?error=nosharef`);
   await setOrderStatus(id, status as OrderStatus);
   await writeAudit({ actorId: actor.id, actorEmail: actor.email, action: "order.status", targetType: "order", targetId: id, detail: `status -> ${status}` });
   revalidatePath("/admin/orders");
@@ -174,9 +177,15 @@ export async function saveShippingAction(fd: FormData) {
   const allowed = ["processing", "shipped", "delivered"];
   if (!id || !allowed.includes(status)) redirect("/admin/orders?error=1");
 
-  await updateShipping(id, { carrier: carrier || null, trackingCode: trackingCode || null, status: status as OrderStatus });
-  // the customer hears about a shipment only once it actually leaves / arrives
-  if (status === "shipped" || status === "delivered") {
+  // shipping only makes sense once the order is paid and still alive
+  const before = await getOrderDetail(id);
+  const shippable = ["paid", "processing", "shipped", "delivered"];
+  if (!before || !shippable.includes(before.order.status)) redirect(`/admin/orders/${encodeURIComponent(id)}?error=shipping`);
+
+  const moved = await updateShipping(id, { carrier: carrier || null, trackingCode: trackingCode || null, status: status as OrderStatus });
+  if (!moved) redirect(`/admin/orders/${encodeURIComponent(id)}?error=shipping`);
+  // the customer hears about a shipment only when the status actually moves
+  if (status !== before.order.status && (status === "shipped" || status === "delivered")) {
     const h = await headers();
     await sendShippingNotice(id, h.get("origin") ?? `http://${h.get("host")}`);
   }

@@ -12,6 +12,7 @@ export type AuditAction =
   | "order.refund"
   | "order.shipping"
   | "user.role"
+  | "user.password"
   | "brand.rename"
   | "review.hide"
   | "review.show";

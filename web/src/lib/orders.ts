@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cartItems, orderItems, orders, products } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
@@ -11,8 +11,12 @@ export type PlaceOrderResult =
   | { ok: true; orderId: string; totalMinor: number }
   | { ok: false; error: "EMPTY_CART" | "OUT_OF_STOCK" };
 
-/** How long a pending order holds its stock. Stripe sessions use the same window. */
-export const RESERVATION_MINUTES = 30;
+/**
+ * How long a pending order holds its stock. Longer than Stripe's 30-minute minimum session lifetime,
+ * so a legal session can always expire before the hold does. Expiry is still live when the hold is
+ * older than (RESERVATION_MINUTES - 30) minutes: payAction then extends the hold, once, bounded.
+ */
+export const RESERVATION_MINUTES = 35;
 
 /**
  * Create a pending order. Prices ALWAYS come from the DB at checkout time, never from the client.
@@ -104,22 +108,42 @@ async function releaseStock(orderId: string) {
   return true;
 }
 
-/** Cancel all pending orders whose 30-minute hold ran out and give their stock back. Safe to call often. */
+/**
+ * Cancel every pending order whose hold ran out and give its stock back. Safe to call often.
+ * A NULL reserved_until (rows written before the column existed) counts as expired once the order
+ * is older than RESERVATION_MINUTES. Claim, item read and increments share one transaction, so the
+ * sweep cannot interleave with itself and hand the same qty back twice. Returns the orders claimed.
+ */
 export async function releaseExpiredReservations() {
-  const expired = await db
-    .select({ id: orders.id })
-    .from(orders)
-    .where(and(eq(orders.status, "pending"), eq(orders.stockReleased, false), lt(orders.reservedUntil, sql`now()`)));
-
-  for (const { id } of expired) {
-    const [claimed] = await db
+  return db.transaction(async (tx) => {
+    const expired = await tx
       .update(orders)
-      .set({ status: "cancelled" })
-      .where(and(eq(orders.id, id), eq(orders.status, "pending")))
+      .set({ status: "cancelled", stockReleased: true })
+      .where(
+        and(
+          eq(orders.status, "pending"),
+          eq(orders.stockReleased, false),
+          or(
+            lt(orders.reservedUntil, sql`now()`),
+            and(isNull(orders.reservedUntil), lt(orders.createdAt, sql`now() - (${RESERVATION_MINUTES} * interval '1 minute')`)),
+          ),
+        ),
+      )
       .returning({ id: orders.id });
-    if (claimed) await releaseStock(id);
-  }
-  return expired.length;
+    if (!expired.length) return 0;
+
+    const items = await tx
+      .select({ handle: orderItems.handle, qty: orderItems.qty })
+      .from(orderItems)
+      .where(inArray(orderItems.orderId, expired.map((o) => o.id)));
+    for (const i of items) {
+      await tx
+        .update(products)
+        .set({ stock: sql`${products.stock} + ${i.qty}`, updatedAt: new Date() })
+        .where(eq(products.handle, i.handle));
+    }
+    return expired.length;
+  });
 }
 
 /** Pending orders only; an already-cancelled order returns false so the caller can say so. */
@@ -144,22 +168,17 @@ export async function cancelOrder(orderId: string, actorEmail: string) {
 }
 
 /**
- * Refund a paid order. The Stripe refund only fires when the payment intent was stored;
- * without Stripe configured this is a manual refund (money returned outside the app) and the
- * order is still marked refunded. A Stripe error aborts, so the order never lies about the money.
+ * Refund a paid order. The claim (paid -> refunded) happens BEFORE the Stripe call so two buttons
+ * cannot refund twice; the refund carries an idempotency key, and a Stripe error rolls the claim
+ * back so the order never lies about the money. Without Stripe this is a manual refund.
  */
 export async function refundOrder(orderId: string, actorEmail: string) {
-  const [order] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
-  if (!order?.paid) return false;
-
-  if (stripe && order.stripePaymentIntent) {
-    try {
-      await stripe.refunds.create({ payment_intent: order.stripePaymentIntent });
-    } catch (e) {
-      console.error("stripe refund failed:", e instanceof Error ? e.message.slice(0, 120) : e);
-      return false;
-    }
-  }
+  const [before] = await db
+    .select({ status: orders.status, paid: orders.paid, stripePaymentIntent: orders.stripePaymentIntent })
+    .from(orders)
+    .where(eq(orders.id, orderId))
+    .limit(1);
+  if (!before?.paid) return false;
 
   const [claimed] = await db
     .update(orders)
@@ -168,6 +187,16 @@ export async function refundOrder(orderId: string, actorEmail: string) {
     .returning({ id: orders.id });
   if (!claimed) return false;
 
+  if (stripe && before.stripePaymentIntent) {
+    try {
+      await stripe.refunds.create({ payment_intent: before.stripePaymentIntent }, { idempotencyKey: `refund:${orderId}` });
+    } catch (e) {
+      console.error("stripe refund failed:", e instanceof Error ? e.message.slice(0, 120) : e);
+      await db.update(orders).set({ status: before.status, paid: true }).where(eq(orders.id, orderId));
+      return false;
+    }
+  }
+
   await releaseStock(orderId);
   await writeAudit({
     actorId: null,
@@ -175,7 +204,36 @@ export async function refundOrder(orderId: string, actorEmail: string) {
     action: "order.refund",
     targetType: "order",
     targetId: orderId,
-    detail: order.stripePaymentIntent && stripe ? "stripe refund, stock restored" : "manual refund, stock restored",
+    detail: before.stripePaymentIntent && stripe ? "stripe refund, stock restored" : "manual refund, stock restored",
+  });
+  return true;
+}
+
+/**
+ * A payment that lands after the hold was released must never quietly keep the money.
+ * Used by the webhook, the confirmation route and the pay button when markPaid refused.
+ * Safe to retry: the refund key is derived from the session and the order flips to refunded once.
+ */
+export async function refundLatePayment(orderId: string, sessionId: string, paymentIntent: string | null) {
+  if (!(await refundOrder(orderId, "stripe:late-payment"))) {
+    if (!stripe || !paymentIntent) return false;
+    try {
+      await stripe.refunds.create({ payment_intent: paymentIntent }, { idempotencyKey: `late:${sessionId || paymentIntent}` });
+    } catch (e) {
+      console.error("stripe late refund failed:", e instanceof Error ? e.message.slice(0, 120) : e);
+      return false;
+    }
+    // keep the intent so a later manual refund and the refund page still have something to work with
+    await db.update(orders).set({ status: "refunded", stripePaymentIntent: paymentIntent }).where(eq(orders.id, orderId));
+  }
+
+  await writeAudit({
+    actorId: null,
+    actorEmail: "stripe:late-payment",
+    action: "order.refund",
+    targetType: "order",
+    targetId: orderId,
+    detail: "late payment auto-refund",
   });
   return true;
 }

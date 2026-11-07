@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orderItems, orders, products, reviews, users, type orderStatus } from "@/db/schema";
 
@@ -49,11 +49,17 @@ export async function setOrderStatus(id: string, status: OrderStatus) {
   await db.update(orders).set({ status, paid }).where(eq(orders.id, id));
 }
 
+/** Carrier fields move only while the order is paid and alive; returns false when the guard refused. */
 export async function updateShipping(
   id: string,
   { carrier, trackingCode, status }: { carrier: string | null; trackingCode: string | null; status: OrderStatus },
 ) {
-  await db.update(orders).set({ carrier, trackingCode, status }).where(eq(orders.id, id));
+  const rows = await db
+    .update(orders)
+    .set({ carrier, trackingCode, status })
+    .where(and(eq(orders.id, id), inArray(orders.status, ["paid", "processing", "shipped", "delivered"])))
+    .returning({ id: orders.id });
+  return rows.length > 0;
 }
 
 export async function listAdminProducts({ q, status, page }: { q?: string; status?: "draft" | "active" | "archived"; page: number }) {

@@ -23,7 +23,7 @@ export default async function OrderPage({
   searchParams,
 }: PageProps<"/checkout/[id]">) {
   const { id } = await params;
-  const { paid, cancel, error, cancelled } = await searchParams;
+  const { paid, cancel, error, cancelled, refunded } = await searchParams;
   const order = await getOrder(id);
   if (!order) notFound();
 
@@ -68,7 +68,12 @@ export default async function OrderPage({
       ) : null}
       {cancel ? <p className="mt-6 text-sm text-taupe">Payment cancelled. Your order stays pending.</p> : null}
       {cancelled ? <p className="mt-6 text-sm text-brass">Order cancelled. The items are back in stock.</p> : null}
+      {refunded ? <p className="mt-6 text-sm text-brass">The hold on this order had ended, so the payment was refunded automatically.</p> : null}
       {error === "stripe" ? <p className="mt-6 text-sm text-taupe">Card payment is not configured.</p> : null}
+      {error === "session" ? <p className="mt-6 text-sm text-brass">This payment session expired — place the order again.</p> : null}
+      {error === "hold" ? <p className="mt-6 text-sm text-brass">This hold expired — place the order again.</p> : null}
+      {error === "busy" ? <p className="mt-6 text-sm text-taupe">Payment is already starting — refresh in a moment.</p> : null}
+      {error === "refund" ? <p className="mt-6 text-sm text-brass">Payment could not be confirmed or refunded — we will sort it out by email.</p> : null}
 
       {owns && order.status === "pending" ? (
         <form action={cancelMyOrderAction} className="mt-6">

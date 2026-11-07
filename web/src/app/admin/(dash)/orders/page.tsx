@@ -8,13 +8,13 @@ import { usd } from "@/lib/money";
 const FILTERS: (OrderStatus | "all")[] = ["all", ...orderStatus.enumValues];
 
 export default async function AdminOrders({ searchParams }: { searchParams: Promise<{ status?: string; page?: string }> }) {
+  const staff = await requireStaff(); // guard first: the sweep below writes to the DB
   const sp = await searchParams;
   const status = FILTERS.includes(sp.status as OrderStatus) ? (sp.status as OrderStatus) : undefined;
   const page = Math.max(1, Number(sp.page) || 1);
   // a manager opening the list sweeps the holds that already ran out, so stock comes back
   await releaseExpiredReservations();
   const { items, total, pages } = await listOrders({ status, page });
-  const staff = await requireStaff();
   const qs = (s?: OrderStatus) => (s ? `/admin/orders?status=${s}` : "/admin/orders");
 
   return (

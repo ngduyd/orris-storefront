@@ -12,6 +12,7 @@ import { SESSION_COOKIE, currentUser, signIn, signOut } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { consumeToken, issueToken, pruneTokens } from "@/lib/tokens";
 import { clearFailures, clientIp, hit, noteFailure, tooMany } from "@/lib/rate-limit";
+import { writeAudit } from "@/lib/audit";
 
 const credentials = z.object({
   email: z.email().max(120).transform((v) => v.trim().toLowerCase()),
@@ -50,7 +51,8 @@ export async function registerAction(fd: FormData) {
   if (!parsed.success) redirect(`/account/register?error=format&next=${encodeURIComponent(next)}`);
 
   // public sign-up: one address cannot create accounts in a loop
-  if (hit(`register:${await clientIp()}`, 5, HOUR)) redirect(`/account/register?error=slow&next=${encodeURIComponent(next)}`);
+  const ip = await clientIp();
+  if (ip && hit(`register:${ip}`, 5, HOUR)) redirect(`/account/register?error=slow&next=${encodeURIComponent(next)}`);
 
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, parsed.data.email)).limit(1);
   if (existing) redirect(`/account/register?error=taken&next=${encodeURIComponent(next)}`);
@@ -89,7 +91,8 @@ export async function forgotAction(fd: FormData) {
   if (!parsed.success) redirect("/account/forgot?error=format");
 
   // two limits: the address that floods us, and the one email address being hammered
-  if (hit(`forgot-ip:${await clientIp()}`, 5, HOUR) || hit(`forgot:${email}`, 3, HOUR)) redirect("/account/forgot?error=slow");
+  const ip = await clientIp();
+  if ((ip !== null && hit(`forgot-ip:${ip}`, 5, HOUR)) || hit(`forgot:${email}`, 3, HOUR)) redirect("/account/forgot?error=slow");
 
   const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
   // always report success so account existence never leaks
@@ -140,6 +143,7 @@ export async function changePasswordAction(fd: FormData) {
 
   const currentPassword = String(fd.get("currentPassword") ?? "");
   const newPassword = String(fd.get("newPassword") ?? "");
+  if (hit(`pw:${user.id}`, 5, HOUR)) redirect("/account?pw=slow");
   if (newPassword.length < 8) redirect("/account?pw=short");
 
   const [row] = await db.select({ hash: users.passwordHash }).from(users).where(eq(users.id, user.id)).limit(1);
@@ -149,6 +153,7 @@ export async function changePasswordAction(fd: FormData) {
   await db.update(users).set({ passwordHash: await hashPassword(newPassword) }).where(eq(users.id, user.id));
   const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
   await db.delete(sessions).where(and(eq(sessions.userId, user.id), sessionId ? ne(sessions.id, sessionId) : undefined));
+  await writeAudit({ actorId: user.id, actorEmail: user.email, action: "user.password", targetType: "user", targetId: user.id, detail: "password changed, other sessions signed out" });
   redirect("/account?pw=ok");
 }
 

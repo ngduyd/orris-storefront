@@ -73,6 +73,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <p role="alert" className="text-sm text-brass">New password needs at least 8 characters.</p>
         ) : pw === "google" ? (
           <p className="text-sm text-brass">This account signs in with Google, so it has no password.</p>
+        ) : pw === "slow" ? (
+          <p role="alert" className="text-sm text-brass">Too many password changes — try again in an hour.</p>
         ) : null}
         <button className="border border-ink px-5 py-2 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
           Save password

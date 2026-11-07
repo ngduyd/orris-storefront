@@ -1,5 +1,5 @@
-import { getOrder, markPaid } from "@/lib/orders";
-import { sendBill } from "@/lib/bill";
+import { getOrder } from "@/lib/orders";
+import { confirmSessionPaid } from "@/lib/bill";
 import { stripe } from "@/lib/stripe";
 
 /**
@@ -24,8 +24,9 @@ export async function GET(req: Request) {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     if (session.payment_status === "paid") {
       const paymentIntent = typeof session.payment_intent === "string" ? session.payment_intent : null;
-      const first = await markPaid(orderId, session.id, paymentIntent); // false = the webhook already handled it
-      if (first) await sendBill(orderId, url.origin);
+      const outcome = await confirmSessionPaid(orderId, session.id, paymentIntent, url.origin);
+      if (outcome === "refunded") return back("?refunded=1"); // the hold was gone, money went back
+      if (outcome === "failed") return back("?error=refund"); // nothing was kept: say so, never a silent ok
       return back("");
     }
   } catch (e) {

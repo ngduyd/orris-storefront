@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -11,7 +10,7 @@ import { currentCart } from "@/lib/cart-cookie";
 import { attachCartUser } from "@/lib/cart";
 import { currentUser } from "@/lib/auth";
 import { cancelOrder, getOrder, placeOrder } from "@/lib/orders";
-import { noteFailure, tooMany } from "@/lib/rate-limit";
+import { clientIp, noteFailure, tooMany } from "@/lib/rate-limit";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -22,17 +21,13 @@ const schema = z.object({
 
 export type CheckoutState = { error?: string };
 
-/** The first x-forwarded-for hop is the client when a proxy sits in front. */
-async function clientIp() {
-  const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-}
-
 export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promise<CheckoutState> {
   const user = await currentUser();
   if (!user) return { error: "Please sign in to place an order." };
 
-  const rateKey = `checkout:${await clientIp()}`;
+  // signed-in checkout: the account is the identity, the IP only adds a per-network limit when known
+  const ip = await clientIp();
+  const rateKey = ip ? `checkout-ip:${ip}` : `checkout-user:${user.id}`;
   if (tooMany(rateKey, 20, HOUR)) redirect("/checkout?error=slow");
   noteFailure(rateKey, HOUR);
 

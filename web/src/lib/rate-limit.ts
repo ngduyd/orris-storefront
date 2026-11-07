@@ -31,8 +31,15 @@ export function hit(key: string, limit: number, windowMs: number) {
   return false;
 }
 
-/** First hop of x-forwarded-for: that is the client when a proxy chain is in front. */
-export async function clientIp() {
-  const fwd = (await headers()).get("x-forwarded-for");
-  return fwd?.split(",")[0].trim() || "unknown";
+/**
+ * Client address, or null when nothing trustworthy is in front of us. x-real-ip is set by our proxy;
+ * in x-forwarded-for the LAST hop is the nearest proxy, the first one is whatever the client sent.
+ * Callers must skip the IP limit on null, never share one bucket between all visitors.
+ */
+export async function clientIp(): Promise<string | null> {
+  const h = await headers();
+  const real = h.get("x-real-ip")?.trim();
+  if (real) return real;
+  const hops = h.get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  return hops.at(-1) ?? null;
 }

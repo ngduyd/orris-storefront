@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, describe, expect, it } from "vitest";
-import { eq, inArray } from "drizzle-orm";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLogs, orderItems, orders, products } from "@/db/schema";
 import { cancelOrder, markPaid, releaseExpiredReservations } from "@/lib/orders";
@@ -11,19 +11,25 @@ const STOCK = 100;
 const orderIds: string[] = [];
 
 async function seedProduct() {
-  await db.insert(products).values({
-    handle: HANDLE,
-    title: "Reservation Fixture",
-    brand: "Fixture",
-    gender: "Unisex",
-    sizeMl: 50,
-    priceMinor: 10000,
-    notes: { top: ["a"], mid: ["b"], base: ["c"] },
-    image: "fixture.webp",
-    status: "active",
-    stock: STOCK,
-  });
+  await db
+    .insert(products)
+    .values({
+      handle: HANDLE,
+      title: "Reservation Fixture",
+      brand: "Fixture",
+      gender: "Unisex",
+      sizeMl: 50,
+      priceMinor: 10000,
+      notes: { top: ["a"], mid: ["b"], base: ["c"] },
+      image: "fixture.webp",
+      status: "active",
+      stock: STOCK,
+    })
+    .onConflictDoNothing();
 }
+
+// idempotent seed in beforeEach so every test can also run alone (`-t "name"`)
+beforeEach(seedProduct);
 
 /** Insert an order and take its stock, the way placeOrder holds it at checkout. */
 async function seedOrder(opts: { qty: number; reservedUntil: Date | null; stockReleased?: boolean; paid?: boolean; stripeId?: string }) {
@@ -56,7 +62,6 @@ afterAll(async () => {
 
 describe("stock reservations", () => {
   it("expired reservation restores stock exactly once and cancels the order", async () => {
-    await seedProduct();
     const orderId = await seedOrder({ qty: 2, reservedUntil: new Date(Date.now() - 60_000) });
     expect(await stock()).toBe(STOCK - 2);
 
@@ -90,6 +95,17 @@ describe("stock reservations", () => {
     expect(after.paid).toBe(false);
     expect(after.status).toBe("pending");
   });
+
+  it("a pending order without reserved_until is swept once it is old enough", async () => {
+    const old = await seedOrder({ qty: 1, reservedUntil: null });
+    await db.update(orders).set({ createdAt: new Date(Date.now() - 40 * 60_000) }).where(eq(orders.id, old));
+    const young = await seedOrder({ qty: 1, reservedUntil: null });
+
+    await releaseExpiredReservations();
+    expect((await readOrder(old)).status).toBe("cancelled");
+    expect((await readOrder(old)).stockReleased).toBe(true);
+    expect((await readOrder(young)).status).toBe("pending");
+  });
 });
 
 describe("one checkout session per order", () => {
@@ -100,5 +116,25 @@ describe("one checkout session per order", () => {
     await expect(
       db.insert(orders).values({ id: randomUUID(), email: "dup@example.com", status: "pending", totalMinor: 10000, stripeId }),
     ).rejects.toThrow();
+  });
+
+  // the exact claim payAction runs before calling Stripe: one click can win, the other must not
+  const claim = (id: string) =>
+    db
+      .update(orders)
+      .set({ stripeId: `claim:${id}` })
+      .where(and(eq(orders.id, id), isNull(orders.stripeId), eq(orders.status, "pending"), eq(orders.stockReleased, false)))
+      .returning({ id: orders.id });
+
+  it("the pay claim lets exactly one creator through", async () => {
+    const orderId = await seedOrder({ qty: 1, reservedUntil: new Date(Date.now() + 35 * 60_000) });
+    expect(await claim(orderId)).toHaveLength(1);
+    expect(await claim(orderId)).toHaveLength(0);
+  });
+
+  it("the pay claim holds under a concurrent double click", async () => {
+    const orderId = await seedOrder({ qty: 1, reservedUntil: new Date(Date.now() + 35 * 60_000) });
+    const results = await Promise.all([claim(orderId), claim(orderId)]);
+    expect(results.flat()).toHaveLength(1);
   });
 });
