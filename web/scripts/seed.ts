@@ -1,5 +1,5 @@
 /** data/processed/products.csv -> bảng products. Chạy lại an toàn (upsert theo handle). */
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "csv-parse/sync";
 import { sql } from "drizzle-orm";
@@ -8,8 +8,10 @@ import { coupons, products } from "../src/db/schema";
 
 const CSV = join(process.cwd(), "..", "data/processed/products.csv");
 const IMG_DIR = join(process.cwd(), "..", "data", "images_norm");
-// tên file local là <handle>.<ext>, ext lấy theo magic bytes lúc tải nên phải dò thật
-const images = new Map(readdirSync(IMG_DIR).map((f) => [f.slice(0, f.lastIndexOf(".")), f]));
+// Local filenames are <handle>.<ext>, and the extension follows the magic bytes, so the directory
+// is read when present. Without it (a deploy that ships only the CSV) the Cloudinary public id is
+// still <handle>.webp, which is exactly what imageUrl() builds.
+const images = new Map(existsSync(IMG_DIR) ? readdirSync(IMG_DIR).map((f) => [f.slice(0, f.lastIndexOf(".")), f]) : []);
 const split = (s: string) => (s ? s.split("|").map((x) => x.trim()).filter(Boolean) : []);
 
 const rows = (parse(readFileSync(CSV, "utf8"), { columns: true, skip_empty_lines: true }) as Record<string, string>[])
@@ -29,8 +31,8 @@ const rows = (parse(readFileSync(CSV, "utf8"), { columns: true, skip_empty_lines
     year: r.year ? Number(r.year) : null,
     description: r.description || null,
     // ảnh nguồn hỏng (1 SKU) -> để draft, không hiện trên storefront
-    image: images.get(r.handle) ?? "",
-    status: (images.has(r.handle) ? "active" : "draft") as "active" | "draft",
+    image: images.get(r.handle) ?? `${r.handle}.webp`,
+    status: "active" as const,
     stock: 100,
   }));
 
