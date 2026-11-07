@@ -35,6 +35,15 @@ if [ "${1:-}" != "--no-migrate" ]; then
   $COMPOSE $FILE run --rm --no-deps migrate
 fi
 
+if [ -f data/processed/products.csv ]; then
+  echo "==> seeding the catalogue"
+  $COMPOSE $FILE run --rm --no-deps migrate npx tsx scripts/seed.ts || {
+    echo "seeding failed; the app still starts, rerun: $COMPOSE $FILE run --rm --no-deps migrate npx tsx scripts/seed.ts" >&2
+  }
+else
+  echo "==> no data/processed/products.csv, skipping seed"
+fi
+
 echo "==> starting the app"
 # explicit services: the one-shot migrate must never be started by `up`
 $COMPOSE $FILE up -d db app

@@ -29,6 +29,9 @@ services:
     environment:
       # declared in .env; nested defaults like ${A:-${B}} are not expanded by podman-compose
       DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
+    volumes:
+      # so `run --rm migrate npx tsx scripts/seed.ts` can read the catalogue
+      - ./data/processed:/data/processed:ro
 
   app:
     image: ${ORRIS_IMAGE:-ghcr.io/ngduyd/orris-storefront:latest}
