@@ -32,3 +32,6 @@ web/.git.orig/
 
 # uploads local khi chưa cấu hình Cloudinary
 web/public/uploads/
+
+# parallel work trees (temporary)
+.worktrees/
