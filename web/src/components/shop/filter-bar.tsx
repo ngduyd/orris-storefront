@@ -53,7 +53,7 @@ export async function FilterBar({ sp }: { sp: SearchParams }) {
         ))}
       </Group>
       {active.length ? (
-        <div className="pt-1">
+        <div className="pt-4">
           <Link href="/shop" className="label link-underline text-brass">Clear all</Link>
         </div>
       ) : null}
@@ -89,30 +89,34 @@ export async function FilterBar({ sp }: { sp: SearchParams }) {
     <div className="border-y border-line">
       {searchBox}
       {/* mobile: collapsed, opened with <details> — no JS */}
-      <details className="group md:hidden">
+      <details className="group/filterbar md:hidden">
         <summary className="flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
           <span className="label flex items-center gap-2 text-ink">
             Filter & sort
-            <span aria-hidden className="transition-transform duration-300 ease-[var(--ease-out-soft)] group-open:rotate-180">▾</span>
+            <span aria-hidden className="transition-transform duration-300 ease-[var(--ease-out-soft)] group-open/filterbar:rotate-180">▾</span>
           </span>
           <span className="label">
             {active.length ? `${active.length} active` : sortLabel}
           </span>
         </summary>
-        <div className="space-y-5 pb-5">{groups}</div>
+        <div className="pb-5">{groups}</div>
       </details>
 
-      <div className="hidden space-y-4 py-5 md:block">{groups}</div>
+      <div className="hidden py-4 md:block">{groups}</div>
     </div>
   );
 }
 
+/** Filter section: collapsible but open by default, no JS. */
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="label w-14 shrink-0">{label}</span>
-      <div className="flex flex-1 flex-wrap gap-2">{children}</div>
-    </div>
+    <details open className="group/section border-b border-line/60 py-3 last:border-0">
+      <summary className="label flex cursor-pointer list-none items-center gap-2 marker:content-none [&::-webkit-details-marker]:hidden">
+        <span aria-hidden className="text-taupe transition-transform duration-300 ease-[var(--ease-out-soft)] group-open/section:rotate-90">›</span>
+        {label}
+      </summary>
+      <div className="mt-3 flex flex-wrap gap-2 pl-4">{children}</div>
+    </details>
   );
 }
 
