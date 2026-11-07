@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { endSaleAction, saveProductAction } from "@/actions/admin";
-import { getAdminProduct } from "@/lib/admin";
+import { getAdminProduct, listBrands } from "@/lib/admin";
 import { requireManager } from "@/lib/auth";
 import { imageUrl } from "@/lib/image";
 import { discountPercent, onSale, sarNote, usd } from "@/lib/money";
@@ -18,6 +18,7 @@ export default async function AdminProductEdit({
   const { handle } = await params;
   const { saved, error } = await searchParams;
   const p = await getAdminProduct(handle);
+  const brands = await listBrands();
   if (!p) notFound();
 
   const field = "mt-2 w-full border border-line bg-transparent px-3 py-2 text-sm focus:border-ink focus:outline-none";
@@ -50,7 +51,13 @@ export default async function AdminProductEdit({
       </div>
 
       {saved ? <p className="mt-6 text-sm text-brass">Saved.</p> : null}
-      {error ? <p className="mt-6 text-sm text-brass">Check the fields: price/stock/size non-negative, title/brand/image required, compare-at only counts when above price.</p> : null}
+      {error === "brand" ? (
+        <p className="mt-6 text-sm text-brass">
+          Brand này chưa có trong catalog. Tick “create new brand” nếu thật sự muốn tạo.
+        </p>
+      ) : error ? (
+        <p className="mt-6 text-sm text-brass">Check the fields: price/stock/size non-negative, title/brand/image required, compare-at only counts when above price.</p>
+      ) : null}
 
       <form action={saveProductAction} className="mt-8 grid gap-5 border-t border-line pt-6 sm:grid-cols-2">
         <input type="hidden" name="handle" value={p.handle} />
@@ -62,7 +69,16 @@ export default async function AdminProductEdit({
 
         <label className="block">
           <span className="label">Brand</span>
-          <input name="brand" required defaultValue={p.brand} className={field} />
+          <input name="brand" required defaultValue={p.brand} list="brand-list" autoComplete="off" className={field} />
+          <datalist id="brand-list">
+            {brands.map((b) => (
+              <option key={b.brand} value={b.brand}>{b.products}</option>
+            ))}
+          </datalist>
+          <label className="mt-2 flex items-center gap-2 text-xs text-taupe">
+            <input type="checkbox" name="newBrand" className="size-3 accent-ink" />
+            create new brand
+          </label>
         </label>
 
         <label className="block">

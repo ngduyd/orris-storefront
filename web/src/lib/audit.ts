@@ -9,7 +9,8 @@ export type AuditAction =
   | "product.update"
   | "order.status"
   | "order.shipping"
-  | "user.role";
+  | "user.role"
+  | "brand.rename";
 
 export async function writeAudit(entry: {
   actorId?: string | null;

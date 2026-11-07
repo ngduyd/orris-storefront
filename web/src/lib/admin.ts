@@ -166,3 +166,26 @@ export async function salesStats() {
 
   return { totals, daily, topBrands };
 }
+
+export async function listBrands() {
+  return db
+    .select({
+      brand: products.brand,
+      products: sql<number>`count(*)::int`,
+      onSale: sql<number>`count(*) filter (where compare_at_minor > price_minor)::int`,
+    })
+    .from(products)
+    .groupBy(products.brand)
+    .orderBy(products.brand);
+}
+
+export async function brandExists(name: string) {
+  const [row] = await db.select({ brand: products.brand }).from(products).where(eq(products.brand, name)).limit(1);
+  return Boolean(row);
+}
+
+/** Đổi tên brand trên mọi sản phẩm (gộp luôn nếu tên mới đã tồn tại). */
+export async function renameBrand(from: string, to: string) {
+  const rows = await db.update(products).set({ brand: to, updatedAt: new Date() }).where(eq(products.brand, from)).returning({ handle: products.handle });
+  return rows.length;
+}

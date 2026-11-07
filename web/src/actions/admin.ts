@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireManager, requireStaff } from "@/lib/auth";
-import { getAdminProduct, setOrderStatus, setUserRole, updateProductRow, updateShipping, type OrderStatus } from "@/lib/admin";
+import { brandExists, getAdminProduct, renameBrand, setOrderStatus, setUserRole, updateProductRow, updateShipping, type OrderStatus } from "@/lib/admin";
 import { writeAudit } from "@/lib/audit";
 import { orderStatus } from "@/db/schema";
 
@@ -24,6 +24,7 @@ export async function saveProductAction(fd: FormData) {
   const status = String(fd.get("status") ?? "");
   const title = String(fd.get("title") ?? "").trim().slice(0, 200);
   const brand = String(fd.get("brand") ?? "").trim().slice(0, 120);
+  const allowNewBrand = String(fd.get("newBrand") ?? "") === "on";
   const image = String(fd.get("image") ?? "").trim().slice(0, 200);
   const description = String(fd.get("description") ?? "").trim().slice(0, 5000) || null;
 
@@ -35,6 +36,8 @@ export async function saveProductAction(fd: FormData) {
     !Number.isInteger(sizeMl) || sizeMl <= 0 ||
     !(PRODUCT_STATUSES as readonly string[]).includes(status);
   if (bad) redirect(`${back}?error=1`);
+  // brand lạ chỉ được tạo khi tick xác nhận, tránh gõ sai thành brand mới
+  if (!(await brandExists(brand)) && !allowNewBrand) redirect(`${back}?error=brand`);
 
   const before = await getAdminProduct(handle);
   await updateProductRow(handle, {
@@ -141,6 +144,26 @@ export async function saveShippingAction(fd: FormData) {
   });
   revalidatePath("/admin/orders");
   redirect(`/admin/orders/${encodeURIComponent(id)}?saved=1&by=${staff.role}`);
+}
+
+export async function renameBrandAction(fd: FormData) {
+  const actor = await requireManager();
+  const from = String(fd.get("from") ?? "").trim();
+  const to = String(fd.get("to") ?? "").trim().slice(0, 120);
+  if (!from || !to) redirect("/admin/brands?error=1");
+
+  const changed = await renameBrand(from, to);
+  await writeAudit({
+    actorId: actor.id,
+    actorEmail: actor.email,
+    action: "brand.rename",
+    targetType: "brand",
+    targetId: from,
+    detail: `${from} -> ${to} (${changed} products)`,
+  });
+  revalidatePath("/admin/brands");
+  revalidatePath("/shop");
+  redirect("/admin/brands?saved=1");
 }
 
 export async function saveUserRoleAction(fd: FormData) {
