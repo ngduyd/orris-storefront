@@ -28,8 +28,8 @@ services:
       db:
         condition: service_healthy
     environment:
-      # an explicit DATABASE_URL in .env.production wins; otherwise it is derived from POSTGRES_*
-      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-shopify}:${POSTGRES_PASSWORD:-shopify}@db:5432/${POSTGRES_DB:-shopify}}
+      # declared in .env; nested defaults like ${A:-${B}} are not expanded by podman-compose
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
 
   app:
     image: ${ORRIS_IMAGE:-ghcr.io/ngduyd/orris-storefront:latest}
@@ -41,8 +41,8 @@ services:
       - path: .env.production
         required: false
     environment:
-      # an explicit DATABASE_URL in .env.production wins; otherwise it is derived from POSTGRES_*
-      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-shopify}:${POSTGRES_PASSWORD:-shopify}@db:5432/${POSTGRES_DB:-shopify}}
+      # declared in .env; nested defaults like ${A:-${B}} are not expanded by podman-compose
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL in .env}
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0

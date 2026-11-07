@@ -90,9 +90,10 @@ docker build -f web/Dockerfile --target migrator -t ghcr.io/ngduyd/orris-storefr
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-If you set `DATABASE_URL` in `.env.production`, that is what the app and the migration use — the
-`POSTGRES_*` variables only configure the bundled `db` container, so keep the two describing the
-same database (or drop `db` and point `DATABASE_URL` at a managed one).
+`DATABASE_URL` is the single source of truth for the app and the migrations; `POSTGRES_*` only
+configure the bundled `db` container, so keep them describing the same database (or point
+`DATABASE_URL` at a managed one and leave `db` alone). Compose refuses to start without it, which
+is deliberate: podman-compose does not expand nested defaults such as `${A:-${B}}`.
 
 `docker-compose.prod.yml` only pulls: it has no `build:` at all, so a deploy can never ship a
 tree that was not built by CI. `release.yml` publishes two tags per commit — `latest` (the
@@ -107,7 +108,7 @@ same sequence over SSH, so a push to master is all it takes. The catalogue still
 
 | Variable | Needed for |
 | --- | --- |
-| `DATABASE_URL` | everything. Declared, it wins; unset, compose derives it from `POSTGRES_*` |
+| `DATABASE_URL` | everything. Required by compose; use `@db:5432` inside the stack, `@127.0.0.1:5434` (or a managed host) outside |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | card payment (test keys work) |
 | `CLOUDINARY_URL`, `CLOUDINARY_CLOUD` | admin uploads, product images in production |
 | `SMTP_URL` or `SMTP_HOST/PORT/USER/PASS/SECURE`, `MAIL_FROM` | email; unset means links print to the server log |
