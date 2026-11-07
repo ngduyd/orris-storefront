@@ -24,7 +24,8 @@ export const products = pgTable(
     ratingCount: integer("rating_count"),
     year: integer("year"),
     description: text("description"),
-    image: text("image").notNull(), // file name under data/images, extensions vary (jpg/png)
+    image: text("image").notNull(), // primary image (mirrors images[0] when present)
+    images: text("images").array().notNull().default(sql`'{}'::text[]`), // gallery, first = primary
     status: statusEnum("status").notNull().default("active"),
     stock: integer("stock").notNull().default(100),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

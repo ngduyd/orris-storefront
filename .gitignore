@@ -29,3 +29,6 @@ web/.serena/
 
 # repo git cũ của create-next-app (đã chuyển sang repo gốc)
 web/.git.orig/
+
+# uploads local khi chưa cấu hình Cloudinary
+web/public/uploads/

@@ -58,7 +58,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
             <tr key={p.handle} className="border-b border-line/60">
               <td className="w-12 py-2">
                 <div className="relative size-10 bg-ivory-deep">
-                  <Image src={imageUrl(p.image, 80)} alt="" fill sizes="40px" className="object-contain p-1" />
+                  <Image src={imageUrl(p.images[0] || p.image, 80)} alt="" fill sizes="40px" className="object-contain p-1" />
                 </div>
               </td>
               <td className="py-2">

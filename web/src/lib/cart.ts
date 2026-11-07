@@ -52,7 +52,7 @@ export async function clearCart(cartId: string) {
 
 export async function readCart(cartId: string | null): Promise<{ lines: CartLine[]; totalMinor: number; count: number }> {
   if (!cartId) return { lines: [], totalMinor: 0, count: 0 };
-  const rows = await db
+  const raw = await db
     .select({
       handle: cartItems.handle,
       qty: cartItems.qty,
@@ -61,12 +61,15 @@ export async function readCart(cartId: string | null): Promise<{ lines: CartLine
       sizeMl: products.sizeMl,
       priceMinor: products.priceMinor,
       image: products.image,
+      images: products.images,
       stock: products.stock,
     })
     .from(cartItems)
     .innerJoin(products, eq(products.handle, cartItems.handle))
     .where(eq(cartItems.cartId, cartId))
     .orderBy(products.brand, products.title);
+
+  const rows = raw.map(({ images, ...r }) => ({ ...r, image: images[0] || r.image }));
 
   return {
     lines: rows,

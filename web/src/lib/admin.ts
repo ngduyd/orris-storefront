@@ -63,7 +63,7 @@ export async function listAdminProducts({ q, status, page }: { q?: string; statu
   );
   const [items, [c]] = await Promise.all([
     db
-      .select({ handle: products.handle, title: products.title, brand: products.brand, sizeMl: products.sizeMl, priceMinor: products.priceMinor, status: products.status, stock: products.stock, image: products.image })
+      .select({ handle: products.handle, title: products.title, brand: products.brand, sizeMl: products.sizeMl, priceMinor: products.priceMinor, status: products.status, stock: products.stock, image: products.image, images: products.images })
       .from(products)
       .where(where)
       .orderBy(products.brand, products.title)
@@ -90,6 +90,7 @@ export async function updateProductRow(
     stock: number;
     status: "draft" | "active" | "archived";
     image: string;
+    images: string[];
     description: string | null;
   },
 ) {

@@ -25,11 +25,18 @@ export async function saveProductAction(fd: FormData) {
   const title = String(fd.get("title") ?? "").trim().slice(0, 200);
   const brand = String(fd.get("brand") ?? "").trim().slice(0, 120);
   const allowNewBrand = String(fd.get("newBrand") ?? "") === "on";
-  const image = String(fd.get("image") ?? "").trim().slice(0, 200);
+  const imagesRaw = String(fd.get("images") ?? "").trim();
+  let images: string[] = [];
+  try {
+    const parsed = JSON.parse(imagesRaw || "[]");
+    if (Array.isArray(parsed)) images = parsed.filter((v): v is string => typeof v === "string").map((v) => v.trim().slice(0, 200)).filter(Boolean).slice(0, 12);
+  } catch {
+    images = [];
+  }
   const description = String(fd.get("description") ?? "").trim().slice(0, 5000) || null;
 
   const bad =
-    !title || !brand || !image ||
+    !title || !brand || !images.length ||
     !Number.isFinite(priceSar) || priceSar < 0 ||
     (compareSar !== null && (!Number.isFinite(compareSar) || compareSar < 0)) ||
     !Number.isInteger(stock) || stock < 0 ||
@@ -49,7 +56,8 @@ export async function saveProductAction(fd: FormData) {
     compareAtMinor: compareSar !== null && Math.round(compareSar * 100) > Math.round(priceSar * 100) ? Math.round(compareSar * 100) : null,
     stock,
     status: status as (typeof PRODUCT_STATUSES)[number],
-    image,
+    image: images[0],
+    images,
     description,
   });
 
@@ -67,7 +75,7 @@ export async function saveProductAction(fd: FormData) {
           before.priceMinor !== Math.round(priceSar * 100) ? `price ${before.priceMinor / 100} -> ${priceSar}` : null,
           before.stock !== stock ? `stock ${before.stock} -> ${stock}` : null,
           before.status !== status ? `status ${before.status} -> ${status}` : null,
-          before.image !== image ? `image ${before.image} -> ${image}` : null,
+          before.images.join(",") !== images.join(",") ? `images [${before.images.length}] -> [${images.length}]` : null,
         ].filter(Boolean).join(", ") || "no field changed"
       : undefined,
   });
@@ -94,6 +102,7 @@ export async function endSaleAction(fd: FormData) {
       stock: before.stock,
       status: before.status,
       image: before.image,
+      images: before.images,
       description: before.description,
     });
     await writeAudit({

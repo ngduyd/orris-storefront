@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { endSaleAction, saveProductAction } from "@/actions/admin";
+import { ImageManager } from "@/components/admin/image-manager";
 import { getAdminProduct, listBrands } from "@/lib/admin";
 import { requireManager } from "@/lib/auth";
 import { imageUrl } from "@/lib/image";
@@ -29,7 +30,7 @@ export default async function AdminProductEdit({
 
       <div className="mt-4 flex gap-6">
         <div className="relative size-28 shrink-0 bg-ivory-deep">
-          <Image src={imageUrl(p.image, 240)} alt="" fill sizes="112px" className="object-contain p-2" />
+          <Image src={imageUrl(p.images[0] || p.image, 240)} alt="" fill sizes="112px" className="object-contain p-2" />
         </div>
         <div>
           <p className="label">{p.brand}</p>
@@ -120,11 +121,12 @@ export default async function AdminProductEdit({
           </select>
         </label>
 
-        <label className="block sm:col-span-2">
-          <span className="label">Image file name (Cloudinary public_id without extension)</span>
-          <input name="image" required defaultValue={p.image} className={field} />
-          <span className="mt-1 block text-xs text-taupe">The file must already exist on Cloudinary (public_id = name without extension).</span>
-        </label>
+        <div className="sm:col-span-2">
+          <ImageManager
+            handle={p.handle}
+            initial={(p.images.length ? p.images : [p.image]).map((name) => ({ name, url: imageUrl(name, 200) }))}
+          />
+        </div>
 
         <label className="block sm:col-span-2">
           <span className="label">Description</span>

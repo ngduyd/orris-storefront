@@ -18,7 +18,7 @@ export default async function WishlistPage() {
 
   const rows = saved.length
     ? await db
-        .select({ handle: products.handle, title: products.title, brand: products.brand, sizeMl: products.sizeMl, priceMinor: products.priceMinor, image: products.image, status: products.status })
+        .select({ handle: products.handle, title: products.title, brand: products.brand, sizeMl: products.sizeMl, priceMinor: products.priceMinor, image: products.image, images: products.images, status: products.status })
         .from(products)
         .where(inArray(products.handle, saved.map((s) => s.handle)))
     : [];
@@ -38,7 +38,7 @@ export default async function WishlistPage() {
           {rows.map((p) => (
             <li key={p.handle} className="flex items-center gap-5 py-5">
               <Link href={`/product/${p.handle}`} className="relative size-20 shrink-0 bg-ivory-deep">
-                <Image src={imageUrl(p.image, 160)} alt="" fill sizes="80px" className="object-contain p-2" />
+                <Image src={imageUrl(p.images[0] || p.image, 160)} alt="" fill sizes="80px" className="object-contain p-2" />
               </Link>
               <div className="flex-1">
                 <p className="label">{p.brand}</p>

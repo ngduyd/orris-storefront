@@ -35,6 +35,8 @@ docker compose -f docker-compose.prod.yml run --rm migrate npm run db:seed   # n
 
 ### Images
 
+Admin uploads (`/admin/products/[handle]`) sign straight to Cloudinary when `CLOUDINARY_URL` is set; without it files are written to `public/uploads` (dev only, gitignored) and served by `/uploads/[...path]`.
+
 The image does **not** contain `public/images` (a symlink into `data/images_norm`, which is ignored). Production requires `CLOUDINARY_CLOUD` — `imageUrl()` returns Cloudinary URLs. To serve local files instead, uncomment the volume in `docker-compose.prod.yml`:
 
 ```yaml
