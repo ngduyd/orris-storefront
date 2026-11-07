@@ -5,9 +5,12 @@ import { currentUser } from "@/lib/auth";
 import { wishedIn } from "@/lib/wishlist";
 import { statsFor } from "@/lib/reviews";
 import { getBrands, getFacets, listProducts } from "@/lib/products";
+import { imageUrl } from "@/lib/image";
 import { usd } from "@/lib/money";
 
-export const revalidate = 3600;
+// rendered per request: the page is personalised (wishlist) and must read env at runtime, not bake
+// image URLs from whatever the CI builds with
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const [{ items: bestsellers }, { items: arrivals }, facets, brands] = await Promise.all([
@@ -56,7 +59,7 @@ export default async function Home() {
           </div>
           <Link href={`/product/${hero.handle}`} className="group relative aspect-4/5 overflow-hidden bg-ivory-deep">
             <Image
-              src={`/images/${hero.image}`}
+              src={imageUrl(hero.image, 1200)}
               alt={`${hero.brand} ${hero.title}`}
               fill
               sizes="(min-width:768px) 50vw, 100vw"
@@ -111,7 +114,7 @@ export default async function Home() {
         <div className="relative aspect-4/5 bg-ivory-deep md:aspect-3/2">
           {arrivals[0] ? (
             <Image
-              src={`/images/${arrivals[0].image}`}
+              src={imageUrl(arrivals[0].image, 1200)}
               alt=""
               fill
               sizes="(min-width:768px) 50vw, 100vw"
