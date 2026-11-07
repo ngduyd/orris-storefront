@@ -78,8 +78,17 @@ npx next dev -p 3000
 
 ```bash
 cp .env.example .env
+# either use the image CI published (the package is private: log in once)
+docker login ghcr.io -u <user> -p <token>
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+# or build it on the host
 docker compose -f docker-compose.prod.yml up -d --build
 ```
+
+Both services carry an `image:` and a `build:`, so compose uses the registry image when it is
+present locally and builds only when it is not. `release.yml` publishes two tags per commit:
+`latest` (the runner) and `migrator` (the same Dockerfile with drizzle-kit for `db:push`).
 
 `migrate` runs `drizzle-kit push` once and must finish before `app` starts, so a blank volume
 comes up working. The catalogue still has to be loaded separately (the image does not ship `data/`).

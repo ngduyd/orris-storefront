@@ -17,6 +17,8 @@ services:
       retries: 10
 
   migrate:
+    # tagged by release.yml; pull it instead of building when deploying from the registry
+    image: ${ORRIS_MIGRATOR_IMAGE:-ghcr.io/ngduyd/orris-storefront:migrator}
     build:
       context: ./web
       dockerfile: Dockerfile
@@ -30,6 +32,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-shopify}:${POSTGRES_PASSWORD:-shopify}@db:5432/${POSTGRES_DB:-shopify}
 
   app:
+    image: ${ORRIS_IMAGE:-ghcr.io/ngduyd/orris-storefront:latest}
     build:
       context: ./web
       dockerfile: Dockerfile

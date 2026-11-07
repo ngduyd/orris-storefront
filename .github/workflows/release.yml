@@ -24,15 +24,30 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build and push the app image
         uses: docker/build-push-action@v6
         with:
           context: ./web
           file: ./web/Dockerfile
+          target: runner
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/orris-storefront:${{ github.sha }}
             ghcr.io/${{ github.repository_owner }}/orris-storefront:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # the migration service needs drizzle-kit, which the runner image does not ship
+      - name: Build and push the migrator image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: ./web/Dockerfile
+          target: migrator
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/orris-storefront:${{ github.sha }}-migrator
+            ghcr.io/${{ github.repository_owner }}/orris-storefront:migrator
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

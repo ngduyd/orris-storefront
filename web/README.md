@@ -20,7 +20,8 @@ The catalog CSV and images are **not** in the repo (see `.gitignore`: `data/`). 
 
 ```bash
 cp .env.example .env          # DATABASE_URL can be skipped: compose derives it from POSTGRES_*
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+# or build on the host instead: docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 Compose runs three services: `db` (postgres 16 + `init-extensions.sql`), `migrate` (one shot, `drizzle-kit push`, must finish before the app starts) and `app` (the `runner` image, port 3000).
