@@ -138,3 +138,25 @@ describe("one checkout session per order", () => {
     expect(results.flat()).toHaveLength(1);
   });
 });
+
+describe("shipping transitions", () => {
+  it("cannot move an order backwards, so a carrier cannot re-trigger notices", async () => {
+    const { updateShipping } = await import("@/lib/admin");
+    const { placeOrder } = await import("@/lib/orders");
+    const { carts, cartItems } = await import("@/db/schema");
+    await seedProduct(); // beforeEach already seeds; this call is idempotent
+    const cartId = randomUUID();
+    await db.insert(carts).values({ id: cartId });
+    await db.insert(cartItems).values({ cartId, handle: HANDLE, qty: 1 });
+
+    const placed = await placeOrder({ cartId, email: "ship@example.com", name: "Ship", address: "12 Somewhere Street" });
+    expect(placed.ok).toBe(true);
+    const orderId = (placed as { orderId: string }).orderId;
+    await db.update(orders).set({ status: "paid", paid: true }).where(eq(orders.id, orderId));
+
+    expect(await updateShipping(orderId, { carrier: "SMSA", trackingCode: "A1", status: "shipped" })).toBe("paid");
+    expect(await updateShipping(orderId, { carrier: "SMSA", trackingCode: "A2", status: "processing" })).toBeNull();
+    expect(await updateShipping(orderId, { carrier: "SMSA", trackingCode: "A3", status: "shipped" })).toBe("shipped");
+    expect(await updateShipping(orderId, { carrier: "SMSA", trackingCode: "A4", status: "delivered" })).toBe("shipped");
+  });
+});

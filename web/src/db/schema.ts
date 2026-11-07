@@ -157,6 +157,8 @@ export const orders = pgTable(
     totalMinor: integer("total_minor").notNull(),
     currency: text("currency").notNull().default("SAR"),
     carrier: text("carrier"), // shipping company
+    shippingNotifiedStatus: text("shipping_notified_status"), // last status we emailed the customer about
+    shippingNotifiedAt: timestamp("shipping_notified_at", { withTimezone: true }),
     trackingCode: text("tracking_code"),
     stripeId: text("stripe_id"), // checkout session id (unique when set)
     stripePaymentIntent: text("stripe_payment_intent"), // needed for refunds

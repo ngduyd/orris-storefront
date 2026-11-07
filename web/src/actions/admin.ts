@@ -1,5 +1,6 @@
 "use server";
 
+import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -18,6 +19,8 @@ import {
   updateShipping,
   type OrderStatus,
 } from "@/lib/admin";
+import { db } from "@/db";
+import { orders } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { orderStatus } from "@/db/schema";
 
@@ -184,10 +187,18 @@ export async function saveShippingAction(fd: FormData) {
 
   const moved = await updateShipping(id, { carrier: carrier || null, trackingCode: trackingCode || null, status: status as OrderStatus });
   if (!moved) redirect(`/admin/orders/${encodeURIComponent(id)}?error=shipping`);
-  // the customer hears about a shipment only when the status actually moves
+  // the customer hears about a shipment only when the status actually moves forward, and the
+  // claim row makes that true across restarts (no Redis needed for a single instance)
   if (status !== before.order.status && (status === "shipped" || status === "delivered")) {
-    const h = await headers();
-    await sendShippingNotice(id, h.get("origin") ?? `http://${h.get("host")}`);
+    const [claimed] = await db
+      .update(orders)
+      .set({ shippingNotifiedStatus: status, shippingNotifiedAt: new Date() })
+      .where(and(eq(orders.id, id), ne(orders.shippingNotifiedStatus, status)))
+      .returning({ id: orders.id });
+    if (claimed) {
+      const h = await headers();
+      await sendShippingNotice(id, h.get("origin") ?? `http://${h.get("host")}`);
+    }
   }
   await writeAudit({
     actorId: staff.id,

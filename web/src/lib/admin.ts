@@ -50,16 +50,35 @@ export async function setOrderStatus(id: string, status: OrderStatus) {
 }
 
 /** Carrier fields move only while the order is paid and alive; returns false when the guard refused. */
+/** Forward-only shipping ranks. `paid` counts as rank 0 (ready to ship). */
+const SHIPPING_RANK: Record<string, number> = { paid: 0, processing: 1, shipped: 2, delivered: 3 };
+
+/**
+ * Moves a shipment forward only. A tracking-code edit keeps the status (no email); moving
+ * backwards is refused, so a carrier cannot re-trigger notices by looping shipped -> processing.
+ * Returns the previous status, or null when the update was rejected.
+ */
 export async function updateShipping(
   id: string,
   { carrier, trackingCode, status }: { carrier: string | null; trackingCode: string | null; status: OrderStatus },
 ) {
+  const targetRank = SHIPPING_RANK[status];
+  if (targetRank === undefined) return null;
+
+  const [before] = await db.select({ status: orders.status }).from(orders).where(eq(orders.id, id)).limit(1);
+  if (!before) return null;
+
+  const currentRank = SHIPPING_RANK[before.status];
+  if (currentRank === undefined || targetRank < currentRank) return null;
+
+  // optimistic guard: only applies if nobody moved the order in between
   const rows = await db
     .update(orders)
     .set({ carrier, trackingCode, status })
-    .where(and(eq(orders.id, id), inArray(orders.status, ["paid", "processing", "shipped", "delivered"])))
+    .where(and(eq(orders.id, id), eq(orders.status, before.status)))
     .returning({ id: orders.id });
-  return rows.length > 0;
+
+  return rows.length ? before.status : null;
 }
 
 export async function listAdminProducts({ q, status, page }: { q?: string; status?: "draft" | "active" | "archived"; page: number }) {
