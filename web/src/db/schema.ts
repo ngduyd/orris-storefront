@@ -153,8 +153,13 @@ export const orders = pgTable(
     email: text("email").notNull(),
     customerName: text("customer_name").notNull().default(""),
     address: text("address").notNull().default(""),
+    phone: text("phone").notNull().default(""),
     status: orderStatus("status").notNull().default("pending"),
-    totalMinor: integer("total_minor").notNull(),
+    subtotalMinor: integer("subtotal_minor").notNull().default(0), // items only
+    shippingMinor: integer("shipping_minor").notNull().default(0),
+    discountMinor: integer("discount_minor").notNull().default(0),
+    couponCode: text("coupon_code"),
+    totalMinor: integer("total_minor").notNull(), // what the card is charged
     currency: text("currency").notNull().default("SAR"),
     carrier: text("carrier"), // shipping company
     shippingNotifiedStatus: text("shipping_notified_status"), // last status we emailed the customer about
@@ -174,6 +179,13 @@ export const orders = pgTable(
     index("orders_reservation_idx").on(t.status, t.reservedUntil),
   ],
 );
+
+export const coupons = pgTable("coupons", {
+  code: text("code").primaryKey(), // stored upper-case
+  percent: integer("percent").notNull(), // 1..90 off the subtotal
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const orderItems = pgTable(
   "order_items",

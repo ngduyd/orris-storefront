@@ -7,15 +7,28 @@ import { usd } from "@/lib/money";
 
 const FILTERS: (OrderStatus | "all")[] = ["all", ...orderStatus.enumValues];
 
-export default async function AdminOrders({ searchParams }: { searchParams: Promise<{ status?: string; page?: string }> }) {
+export default async function AdminOrders({ searchParams }: { searchParams: Promise<{ status?: string; page?: string; q?: string }> }) {
   const staff = await requireStaff(); // guard first: the sweep below writes to the DB
   const sp = await searchParams;
   const status = FILTERS.includes(sp.status as OrderStatus) ? (sp.status as OrderStatus) : undefined;
   const page = Math.max(1, Number(sp.page) || 1);
+  const q = sp.q?.trim().slice(0, 60) || undefined;
   // a manager opening the list sweeps the holds that already ran out, so stock comes back
   await releaseExpiredReservations();
-  const { items, total, pages } = await listOrders({ status, page });
-  const qs = (s?: OrderStatus) => (s ? `/admin/orders?status=${s}` : "/admin/orders");
+  const { items, total, pages } = await listOrders({ status, page, q });
+  const qs = (s?: OrderStatus) => {
+    const p = new URLSearchParams();
+    if (s) p.set("status", s);
+    if (q) p.set("q", q);
+    return p.size ? `/admin/orders?${p}` : "/admin/orders";
+  };
+  const pageQs = (n: number) => {
+    const p = new URLSearchParams();
+    if (status) p.set("status", status);
+    if (q) p.set("q", q);
+    p.set("page", String(n));
+    return `/admin/orders?${p}`;
+  };
 
   return (
     <div>
@@ -29,13 +42,19 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <form className="mt-6 flex flex-wrap gap-2" action="/admin/orders">
+        <input name="q" defaultValue={q} placeholder="Order id, customer name or email" className="min-w-64 flex-1 border border-line bg-transparent px-3 py-2 text-sm focus:border-ink focus:outline-none" />
+        {status ? <input type="hidden" name="status" value={status} /> : null}
+        <button className="border border-ink px-5 py-2 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">Search</button>
+      </form>
+
+      <div className="mt-4 flex flex-wrap gap-2">
         {FILTERS.map((f) => {
           const active = f === (status ?? "all");
           return (
             <Link
               key={f}
-              href={f === "all" ? "/admin/orders" : qs(f as OrderStatus)}
+              href={qs(f === "all" ? undefined : (f as OrderStatus))}
               className={`border px-3 py-1.5 text-xs transition-colors duration-300 ease-[var(--ease-out-soft)] ${active ? "border-ink bg-ink text-ivory" : "border-line text-ink-soft hover:border-ink"}`}
             >
               {f}
@@ -74,11 +93,11 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
 
       {pages > 1 ? (
         <nav className="mt-8 flex items-center justify-between">
-          <Link href={`${qs(status)}${status ? "&" : "?"}page=${page - 1}`} aria-disabled={page <= 1} className={`label ${page <= 1 ? "pointer-events-none opacity-40" : "hover:text-ink"}`}>
+          <Link href={pageQs(page - 1)} aria-disabled={page <= 1} className={`label ${page <= 1 ? "pointer-events-none opacity-40" : "hover:text-ink"}`}>
             ← Newer
           </Link>
           <span className="label">{page} / {pages}</span>
-          <Link href={`${qs(status)}${status ? "&" : "?"}page=${page + 1}`} aria-disabled={page >= pages} className={`label ${page >= pages ? "pointer-events-none opacity-40" : "hover:text-ink"}`}>
+          <Link href={pageQs(page + 1)} aria-disabled={page >= pages} className={`label ${page >= pages ? "pointer-events-none opacity-40" : "hover:text-ink"}`}>
             Older →
           </Link>
         </nav>

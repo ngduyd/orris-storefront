@@ -1,6 +1,10 @@
 # MEMORY
 
 ## Now
+
+- 2026-11-07 · Audit lần cuối, đã đóng thêm: phone ở checkout (+ cột `orders.phone`), phí ship (`SHIPPING_FLAT_MINOR`/`FREE_SHIPPING_OVER_MINOR`), mã giảm giá (bảng `coupons`, demo `ORRIS15` 15%), subtotal/shipping/discount lưu trên đơn và hiện ở order/invoice/admin, webhook `checkout.session.expired` huỷ đơn sớm, xoá file ảnh Cloudinary/local khi bỏ ảnh (có guard `imageUsedElsewhere`), OG mặc định ở root layout, `not-found.tsx` + `error.tsx`, JSON-LD Product, badge Sold out, mail khi cancel/refund, admin: search đơn (id/email/tên), lọc `low=1` (stock ≤3), trang `/admin/users/[id]`, upload API chặn mime + 8MB.
+- 2026-11-07 · 78 test pass (thêm pricing/coupon, tokens, guards: rate-limit + mọi action admin phải có require*). Verify bằng Playwright: đơn thật subtotal $54.67 + ship $2.67 − discount $8.20 = $49.13; admin search hit 1; low-stock filter hit 1; user detail 200.
+- Còn deferred: Redis (chỉ cần khi >1 instance), i18n/AR, analytics/consent.
 - Xong batch tính năng: 3 vai trò (customer/manager/carrier), bill email khi đơn paid, timeline trạng thái + carrier/tracking cho khách, admin đổi trạng thái đơn, trang Sales (doanh số 14 ngày + top houses), /admin/users (đổi role), /admin/audit (audit log), wishlist, link Admin ↔ Shop hai chiều.
 - Verify trên tailnet: manager login → /admin (nav 6 mục); carrier login → /admin/orders (nav 1 mục), /admin/products + /admin/users → denied; carrier cập nhật SMSA + tracking OK, không thấy form manager; wishlist lưu/xoá OK; timeline 5 bước; bill SMTP nhận đúng nội dung.
 - Chưa làm: gửi mail khi đổi trạng thái vận chuyển, wishlist ở product card, phân trang wishlist.

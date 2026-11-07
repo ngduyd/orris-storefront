@@ -8,17 +8,18 @@ import { usd } from "@/lib/money";
 const STATUSES = ["draft", "active", "archived"] as const;
 type Status = (typeof STATUSES)[number];
 
-export default async function AdminProducts({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; page?: string }> }) {
+export default async function AdminProducts({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; page?: string; low?: string }> }) {
   await requireManager();
   const sp = await searchParams;
   const q = sp.q?.trim() || undefined;
   const status = STATUSES.includes(sp.status as Status) ? (sp.status as Status) : undefined;
   const page = Math.max(1, Number(sp.page) || 1);
-  const { items, total, pages } = await listAdminProducts({ q, status, page });
+  const lowStock = sp.low === "1";
+  const { items, total, pages } = await listAdminProducts({ q, status, page, lowStock });
 
   const qs = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    const merged = { q, status, page: String(page), ...over };
+    const merged = { q, status, page: String(page), low: lowStock ? "1" : undefined, ...over };
     for (const [k, v] of Object.entries(merged)) if (v) p.set(k, v);
     return `/admin/products?${p}`;
   };
@@ -38,6 +39,7 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Link href={qs({ status: undefined, page: "1" })} className={`border px-3 py-1.5 text-xs ${!status ? "border-ink bg-ink text-ivory" : "border-line text-ink-soft hover:border-ink"}`}>all</Link>
+        <Link href={qs({ low: lowStock ? undefined : "1", page: "1" })} className={`border px-3 py-1.5 text-xs ${lowStock ? "border-brass bg-brass text-ivory" : "border-line text-ink-soft hover:border-ink"}`}>low stock (≤3)</Link>
         {STATUSES.map((s) => (
           <Link key={s} href={qs({ status: s, page: "1" })} className={`border px-3 py-1.5 text-xs ${status === s ? "border-ink bg-ink text-ivory" : "border-line text-ink-soft hover:border-ink"}`}>{s}</Link>
         ))}

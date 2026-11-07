@@ -19,8 +19,16 @@ export function CheckoutForm({ email }: { email: string }) {
         <input id="name" name="name" required autoComplete="name" className={field} />
       </div>
       <div>
+        <label htmlFor="phone" className="label">Phone (for the courier)</label>
+        <input id="phone" name="phone" type="tel" required autoComplete="tel" inputMode="tel" className={field} />
+      </div>
+      <div>
         <label htmlFor="address" className="label">Shipping address</label>
         <textarea id="address" name="address" required rows={3} autoComplete="street-address" className={field} />
+      </div>
+      <div>
+        <label htmlFor="coupon" className="label">Coupon code (optional)</label>
+        <input id="coupon" name="coupon" autoComplete="off" className={field} />
       </div>
 
       {state.error ? (

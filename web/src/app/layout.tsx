@@ -13,6 +13,14 @@ const sans = Inter({ variable: "--font-inter", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: { default: "ORRIS — Maison de Parfum", template: "%s · ORRIS" },
   description: "A curated house of fragrance. Notes, accords and houses, edited.",
+  openGraph: {
+    type: "website",
+    siteName: "ORRIS",
+    title: "ORRIS — Maison de Parfum",
+    description: "A curated house of fragrance. Notes, accords and houses, edited.",
+    images: ["/images/mont-blanc-mont-blanc-explorer-100ml.webp"],
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

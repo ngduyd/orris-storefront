@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, like, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orderItems, orders, products, reviews, users, type orderStatus } from "@/db/schema";
 
@@ -28,8 +28,16 @@ export async function recentOrders(limit = 8) {
   return db.select().from(orders).orderBy(desc(orders.createdAt)).limit(limit);
 }
 
-export async function listOrders({ status, page }: { status?: OrderStatus; page: number }) {
-  const where = status ? eq(orders.status, status) : undefined;
+export async function listOrders({ status, page, q }: { status?: OrderStatus; page: number; q?: string }) {
+  const term = (q ?? "").trim().slice(0, 60);
+  const search = term
+    ? or(
+        ilike(orders.email, `%${term}%`),
+        ilike(orders.customerName, `%${term}%`),
+        like(orders.id, `${term}%`),
+      )
+    : undefined;
+  const where = and(status ? eq(orders.status, status) : undefined, search);
   const [items, [c]] = await Promise.all([
     db.select().from(orders).where(where).orderBy(desc(orders.createdAt)).limit(ADMIN_PAGE_SIZE).offset((page - 1) * ADMIN_PAGE_SIZE),
     db.select({ n: sql<number>`count(*)::int` }).from(orders).where(where),
@@ -81,9 +89,20 @@ export async function updateShipping(
   return rows.length ? before.status : null;
 }
 
-export async function listAdminProducts({ q, status, page }: { q?: string; status?: "draft" | "active" | "archived"; page: number }) {
+export async function listAdminProducts({
+  q,
+  status,
+  page,
+  lowStock,
+}: {
+  q?: string;
+  status?: "draft" | "active" | "archived";
+  page: number;
+  lowStock?: boolean;
+}) {
   const where = and(
     status ? eq(products.status, status) : undefined,
+    lowStock ? sql`${products.stock} <= 3` : undefined,
     q ? or(ilike(products.title, `%${q}%`), ilike(products.brand, `%${q}%`), ilike(products.handle, `%${q}%`)) : undefined,
   );
   const [items, [c]] = await Promise.all([
@@ -248,4 +267,18 @@ export async function listReviewsForAdmin(limit = 50) {
 export async function setReviewHidden(id: string, hidden: boolean) {
   const [row] = await db.update(reviews).set({ hidden }).where(eq(reviews.id, id)).returning({ handle: reviews.handle });
   return row?.handle ?? null;
+}
+
+/** True when another product still points at this image, so removing it must not delete the file. */
+export async function imageUsedElsewhere(value: string, exceptHandle: string) {
+  const rows = await db.execute(sql`select 1 from products where handle <> ${exceptHandle} and ${value} = any(images) limit 1`);
+  return rows.rows.length > 0;
+}
+
+export async function getUserDetail(id: string) {
+  const [user] = await db.select({ id: users.id, email: users.email, role: users.role, createdAt: users.createdAt, emailVerifiedAt: users.emailVerifiedAt }).from(users).where(eq(users.id, id)).limit(1);
+  if (!user) return null;
+  const list = await db.select().from(orders).where(eq(orders.userId, id)).orderBy(desc(orders.createdAt)).limit(50);
+  const paid = list.filter((o) => o.paid);
+  return { user, orders: list, spendMinor: paid.reduce((s, o) => s + o.totalMinor, 0), paidCount: paid.length };
 }

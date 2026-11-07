@@ -54,7 +54,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
           {items.map((u) => (
             <tr key={u.id} className="border-b border-line/60">
               <td className="py-3">
-                {u.email}
+                <Link href={`/admin/users/${u.id}`} className="link-underline">{u.email}</Link>
                 <span className="ml-2 text-xs text-taupe">{u.provider ?? "password"}{u.name ? ` · ${u.name}` : ""}</span>
               </td>
               <td className="py-3 text-taupe">{u.orders}</td>

@@ -96,9 +96,27 @@ export default async function OrderPage({
         ))}
       </ul>
 
-      <div className="mt-4 flex justify-between text-sm">
-        <span className="label">Total</span>
-        <span>{usd(order.totalMinor)}</span>
+      <div className="mt-4 space-y-1.5 border-t border-line pt-4 text-sm">
+        <div className="flex justify-between">
+          <span className="text-taupe">Subtotal</span>
+          <span>{usd(order.subtotalMinor)}</span>
+        </div>
+        {order.shippingMinor > 0 ? (
+          <div className="flex justify-between">
+            <span className="text-taupe">Shipping</span>
+            <span>{usd(order.shippingMinor)}</span>
+          </div>
+        ) : null}
+        {order.discountMinor > 0 ? (
+          <div className="flex justify-between">
+            <span className="text-taupe">Discount{order.couponCode ? ` · ${order.couponCode}` : ""}</span>
+            <span>−{usd(order.discountMinor)}</span>
+          </div>
+        ) : null}
+        <div className="flex justify-between pt-1">
+          <span className="label">Total</span>
+          <span>{usd(order.totalMinor)}</span>
+        </div>
       </div>
 
       <div className="mt-10 border-t border-line pt-6">
@@ -131,7 +149,10 @@ export default async function OrderPage({
         </div>
         <div className="flex justify-between gap-4">
           <dt className="label">Address</dt>
-          <dd className="max-w-xs text-right text-ink-soft">{order.address}</dd>
+          <dd className="max-w-xs text-right text-ink-soft">
+            {order.address}
+            {order.phone ? <span className="block text-taupe">{order.phone}</span> : null}
+          </dd>
         </div>
       </dl>
 

@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { confirmSessionPaid } from "@/lib/bill";
 import { stripe } from "@/lib/stripe";
+import { cancelOrder } from "@/lib/orders";
 
 /** Webhook Stripe (test mode): stripe listen --forward-to localhost:3000/api/stripe/webhook */
 function originOf(req: Request) {
@@ -38,6 +39,13 @@ export async function POST(req: Request) {
       // 500 makes Stripe retry: an event is never acknowledged while the money is neither kept nor refunded
       if (outcome === "failed") return new Response("confirm failed", { status: 500 });
     }
+  }
+
+  // the customer walked away: free the stock now instead of waiting for the sweep
+  if (event.type === "checkout.session.expired") {
+    const session = event.data.object;
+    const orderId = session.metadata?.orderId || session.client_reference_id;
+    if (orderId) await cancelOrder(orderId, "stripe:session-expired");
   }
 
   return new Response("ok", { status: 200 });

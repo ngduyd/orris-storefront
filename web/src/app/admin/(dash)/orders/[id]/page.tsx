@@ -58,6 +58,22 @@ export default async function AdminOrderDetail({
             </tr>
           ))}
           <tr>
+            <td className="label py-2 text-taupe" colSpan={2}>Subtotal</td>
+            <td className="py-2 text-right">{usd(order.subtotalMinor)}</td>
+          </tr>
+          {order.shippingMinor > 0 ? (
+            <tr>
+              <td className="label py-2 text-taupe" colSpan={2}>Shipping</td>
+              <td className="py-2 text-right">{usd(order.shippingMinor)}</td>
+            </tr>
+          ) : null}
+          {order.discountMinor > 0 ? (
+            <tr>
+              <td className="label py-2 text-taupe" colSpan={2}>Discount{order.couponCode ? ` · ${order.couponCode}` : ""}</td>
+              <td className="py-2 text-right">−{usd(order.discountMinor)}</td>
+            </tr>
+          ) : null}
+          <tr>
             <td className="label py-3">Total</td>
             <td />
             <td className="py-3 text-right">{usd(order.totalMinor)}</td>
@@ -70,6 +86,7 @@ export default async function AdminOrderDetail({
           ["Email", order.email],
           ["Name", order.customerName || "—"],
           ["Address", order.address || "—"],
+          ["Phone", order.phone || "—"],
           ["Status", order.status],
           ["Paid", order.paid ? "yes" : "no"],
           ["Carrier", order.carrier || "—"],

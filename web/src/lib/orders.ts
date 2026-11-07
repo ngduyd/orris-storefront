@@ -1,15 +1,42 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { cartItems, orderItems, orders, products } from "@/db/schema";
+import { cartItems, coupons, orderItems, orders, products } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { stripe } from "@/lib/stripe";
 
-export type PlaceOrderInput = { cartId: string; email: string; name: string; address: string; userId?: string | null };
+/** Flat shipping in SAR minor units; 0 means free. Free above a threshold when set. */
+export function shippingFor(subtotalMinor: number) {
+  const flat = Number(process.env.SHIPPING_FLAT_MINOR ?? 0);
+  const freeOver = Number(process.env.FREE_SHIPPING_OVER_MINOR ?? 0);
+  if (!flat || flat < 0) return 0;
+  if (freeOver > 0 && subtotalMinor >= freeOver) return 0;
+  return flat;
+}
+
+/** Percent discount from the coupons table. Unknown or inactive codes are rejected. */
+export async function couponDiscount(code: string | null | undefined, subtotalMinor: number) {
+  const key = (code ?? "").trim().toUpperCase().slice(0, 32);
+  if (!key) return { ok: true as const, discountMinor: 0, code: null };
+  const [row] = await db.select().from(coupons).where(eq(coupons.code, key)).limit(1);
+  if (!row || !row.active) return { ok: false as const };
+  const discountMinor = Math.floor((subtotalMinor * Math.min(row.percent, 90)) / 100);
+  return { ok: true as const, discountMinor, code: key };
+}
+
+type PlaceOrderInput = {
+  cartId: string;
+  email: string;
+  name: string;
+  address: string;
+  phone?: string;
+  couponCode?: string | null;
+  userId?: string | null;
+};
 
 export type PlaceOrderResult =
   | { ok: true; orderId: string; totalMinor: number }
-  | { ok: false; error: "EMPTY_CART" | "OUT_OF_STOCK" };
+  | { ok: false; error: "EMPTY_CART" | "OUT_OF_STOCK" | "COUPON" };
 
 /**
  * How long a pending order holds its stock. Longer than Stripe's 30-minute minimum session lifetime,
@@ -22,7 +49,7 @@ export const RESERVATION_MINUTES = 35;
  * Create a pending order. Prices ALWAYS come from the DB at checkout time, never from the client.
  * Decrement stock and clear the cart in one transaction; the stock stays held until the reservation expires.
  */
-export async function placeOrder({ cartId, email, name, address, userId }: PlaceOrderInput): Promise<PlaceOrderResult> {
+export async function placeOrder({ cartId, email, name, address, phone, couponCode, userId }: PlaceOrderInput): Promise<PlaceOrderResult> {
   await releaseExpiredReservations();
 
   return db.transaction(async (tx) => {
@@ -42,7 +69,11 @@ export async function placeOrder({ cartId, email, name, address, userId }: Place
     if (!lines.length) return { ok: false as const, error: "EMPTY_CART" as const };
     if (lines.some((l) => l.qty > l.stock)) return { ok: false as const, error: "OUT_OF_STOCK" as const };
 
-    const totalMinor = lines.reduce((s, l) => s + l.priceMinor * l.qty, 0);
+    const subtotalMinor = lines.reduce((s, l) => s + l.priceMinor * l.qty, 0);
+    const coupon = await couponDiscount(couponCode, subtotalMinor);
+    if (!coupon.ok) return { ok: false as const, error: "COUPON" as const };
+    const shippingMinor = shippingFor(subtotalMinor);
+    const totalMinor = Math.max(0, subtotalMinor + shippingMinor - coupon.discountMinor);
     const orderId = randomUUID();
 
     await tx.insert(orders).values({
@@ -51,7 +82,12 @@ export async function placeOrder({ cartId, email, name, address, userId }: Place
       email,
       customerName: name,
       address,
+      phone: phone?.trim().slice(0, 32) ?? "",
       status: "pending",
+      subtotalMinor,
+      shippingMinor,
+      discountMinor: coupon.discountMinor,
+      couponCode: coupon.code,
       totalMinor,
       reservedUntil: new Date(Date.now() + RESERVATION_MINUTES * 60 * 1000),
     });

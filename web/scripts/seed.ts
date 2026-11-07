@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { parse } from "csv-parse/sync";
 import { sql } from "drizzle-orm";
 import { db } from "../src/db";
-import { products } from "../src/db/schema";
+import { coupons, products } from "../src/db/schema";
 
 const CSV = join(process.cwd(), "..", "data/processed/products.csv");
 const IMG_DIR = join(process.cwd(), "..", "data", "images_norm");
@@ -35,6 +35,8 @@ const rows = (parse(readFileSync(CSV, "utf8"), { columns: true, skip_empty_lines
   }));
 
 async function main() {
+  // demo coupon so the checkout code path is usable out of the box
+  await db.insert(coupons).values({ code: "ORRIS15", percent: 15 }).onConflictDoUpdate({ target: coupons.code, set: { active: true, percent: 15 } });
   for (let i = 0; i < rows.length; i += 500) {
     await db
       .insert(products)

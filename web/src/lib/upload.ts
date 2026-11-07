@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 
 /**
  * Upload ảnh sản phẩm. Có CLOUDINARY_URL thì đẩy lên Cloudinary (public_id tự sinh),
  * chưa cấu hình thì ghi vào public/uploads để dev vẫn thử được.
- * ponytail: chưa xoá file Cloudinary khi bỏ ảnh; thêm khi cần dọn rác.
+ * Removing an image deletes the stored file too, so the bucket does not collect orphans.
  */
 const CLOUD = process.env.CLOUDINARY_URL;
 
@@ -44,4 +44,31 @@ export async function uploadImage(file: File, handle: string): Promise<string> {
   const name = `${slug}.${ext}`;
   await writeFile(join(dir, name), Buffer.from(await file.arrayBuffer()));
   return `/uploads/${name}`;
+}
+
+/** Delete the file behind a stored image value: local path or Cloudinary public id. */
+export async function deleteImage(value: string) {
+  if (!value) return;
+  if (value.startsWith("/uploads/")) {
+    const name = value.replace("/uploads/", "").replace(/[^a-zA-Z0-9._-]/g, "");
+    if (!name) return;
+    await rm(join(process.cwd(), "public", "uploads", name), { force: true });
+    return;
+  }
+  if (!CLOUD?.startsWith("cloudinary://")) return;
+  // "perfumes/slug.jpg" -> public id "perfumes/slug"
+  const publicId = value.replace(/\.[a-z0-9]+$/i, "");
+  const u = new URL(CLOUD.replace("cloudinary://", "https://"));
+  const apiKey = decodeURIComponent(u.username);
+  const apiSecret = decodeURIComponent(u.password);
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const signature = createHash("sha1").update(`public_id=${publicId}&timestamp=${timestamp}` + apiSecret).digest("hex");
+  const form = new FormData();
+  form.set("public_id", publicId);
+  form.set("api_key", apiKey);
+  form.set("timestamp", timestamp);
+  form.set("signature", signature);
+  form.set("invalidate", "true");
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${u.hostname}/image/destroy`, { method: "POST", body: form });
+  if (!res.ok) console.error("cloudinary destroy failed:", res.status, (await res.text()).slice(0, 120));
 }

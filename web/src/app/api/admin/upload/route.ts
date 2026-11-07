@@ -16,6 +16,9 @@ export async function POST(req: Request) {
   const files = form.getAll("files").filter((f): f is File => f instanceof File);
   if (!files.length) return Response.json({ error: "no file" }, { status: 400 });
   if (files.length > 8) return Response.json({ error: "too many files (max 8)" }, { status: 400 });
+  const MAX_BYTES = 8 * 1024 * 1024;
+  if (files.some((f) => !f.type.startsWith("image/"))) return Response.json({ error: "only images" }, { status: 400 });
+  if (files.some((f) => f.size > MAX_BYTES)) return Response.json({ error: "image larger than 8MB" }, { status: 400 });
 
   try {
     const images = await Promise.all(files.map((f) => uploadImage(f, handle)));

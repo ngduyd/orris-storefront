@@ -20,6 +20,7 @@ const HOUR = 60 * 60 * 1000;
 const schema = z.object({
   name: z.string().trim().min(2).max(80),
   address: z.string().trim().min(8).max(400),
+  phone: z.string().trim().min(6).max(32).regex(/^[0-9+()\-\s]+$/, "digits only"),
 });
 
 export type CheckoutState = { error?: string };
@@ -43,17 +44,29 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
     if (me && !me.verified && me.provider !== "google") return { error: "Confirm your email first — check your inbox" };
   }
 
-  const parsed = schema.safeParse({ name: fd.get("name"), address: fd.get("address") });
-  if (!parsed.success) return { error: "Check your name and address." };
+  const parsed = schema.safeParse({
+    name: fd.get("name"),
+    address: fd.get("address"),
+    phone: String(fd.get("phone") ?? "").trim().slice(0, 32),
+  });
+  if (!parsed.success) return { error: "Check your name, address and phone." };
 
   const { cartId } = await currentCart();
   if (!cartId) return { error: "Your bag is empty." };
 
   await attachCartUser(cartId, user.id);
 
-  const res = await placeOrder({ cartId, email: user.email, userId: user.id, ...parsed.data });
+  const res = await placeOrder({
+    cartId,
+    email: user.email,
+    userId: user.id,
+    couponCode: String(fd.get("coupon") ?? "").slice(0, 32),
+    ...parsed.data,
+  });
   if (!res.ok) {
-    return { error: res.error === "EMPTY_CART" ? "Your bag is empty." : "An item just sold out. Adjust your bag." };
+    if (res.error === "EMPTY_CART") return { error: "Your bag is empty." };
+    if (res.error === "COUPON") return { error: "That coupon code is not valid." };
+    return { error: "An item just sold out. Adjust your bag." };
   }
 
   revalidatePath("/", "layout");

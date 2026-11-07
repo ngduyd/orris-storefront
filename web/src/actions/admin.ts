@@ -11,6 +11,7 @@ import {
   brandExists,
   getAdminProduct,
   getOrderDetail,
+  imageUsedElsewhere,
   renameBrand,
   setOrderStatus,
   setReviewHidden,
@@ -22,6 +23,7 @@ import {
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
+import { deleteImage } from "@/lib/upload";
 import { orderStatus } from "@/db/schema";
 
 const PRODUCT_STATUSES = ["draft", "active", "archived"] as const;
@@ -77,6 +79,12 @@ export async function saveProductAction(fd: FormData) {
     images,
     description,
   });
+
+  // images dropped in this edit (or the file behind them) would otherwise leak forever
+  if (before) {
+    const kept = new Set(images);
+    for (const old of before.images) if (!kept.has(old) && !(await imageUsedElsewhere(old, handle))) await deleteImage(old);
+  }
 
   await writeAudit({
     actorId: actor.id,
