@@ -21,7 +21,11 @@ export default async function ForgotPage({ searchParams }: { searchParams: Promi
             <span className="label">Email</span>
             <input name="email" type="email" required autoComplete="email" className="mt-2 w-full border border-line bg-transparent px-3 py-2.5 text-sm focus:border-ink focus:outline-none" />
           </label>
-          {error ? <p className="text-sm text-brass">That email doesn't look valid.</p> : null}
+          {error === "slow" ? (
+            <p className="text-sm text-brass">Too many reset requests. Try again in an hour.</p>
+          ) : error ? (
+            <p className="text-sm text-brass">That email doesn't look valid.</p>
+          ) : null}
           <button className="w-full border border-ink px-6 py-3 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
             Send reset link
           </button>

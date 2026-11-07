@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
 import { deleteReview, purchaseOrderId, saveReview } from "@/lib/reviews";
+import { hit } from "@/lib/rate-limit";
+
+const HOUR = 60 * 60 * 1000;
 
 export async function submitReviewAction(fd: FormData) {
   const handle = String(fd.get("handle") ?? "");
@@ -12,6 +15,7 @@ export async function submitReviewAction(fd: FormData) {
   const authorName = String(fd.get("authorName") ?? "").trim().slice(0, 40) || null;
   const user = await currentUser();
   if (!user) redirect(`/account/login?next=${encodeURIComponent(`/product/${handle}`)}`);
+  if (hit(`review:${user.id}`, 10, HOUR)) redirect(`/product/${handle}?review=slow`);
   if (!handle || !Number.isInteger(rating) || rating < 1 || rating > 5) {
     redirect(`/product/${handle}?review=error`);
   }

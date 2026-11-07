@@ -8,6 +8,8 @@ export type AuditAction =
   | "auth.login_failed"
   | "product.update"
   | "order.status"
+  | "order.cancel"
+  | "order.refund"
   | "order.shipping"
   | "user.role"
   | "brand.rename";

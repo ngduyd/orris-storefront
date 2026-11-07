@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ADMIN_PAGE_SIZE, listOrders, type OrderStatus } from "@/lib/admin";
+import { releaseExpiredReservations } from "@/lib/orders";
 import { orderStatus } from "@/db/schema";
 import { usd } from "@/lib/money";
 
@@ -9,6 +10,8 @@ export default async function AdminOrders({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const status = FILTERS.includes(sp.status as OrderStatus) ? (sp.status as OrderStatus) : undefined;
   const page = Math.max(1, Number(sp.page) || 1);
+  // a manager opening the list sweeps the holds that already ran out, so stock comes back
+  await releaseExpiredReservations();
   const { items, total, pages } = await listOrders({ status, page });
   const qs = (s?: OrderStatus) => (s ? `/admin/orders?status=${s}` : "/admin/orders");
 
