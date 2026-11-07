@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { orderItems, orders, products, reviews, users } from "@/db/schema";
-import { deleteReview, listReviews, purchaseOrderId, reviewStats, saveReview } from "@/lib/reviews";
+import { deleteReview, listReviews, purchaseOrderId, reviewStats, saveReview, statsFor } from "@/lib/reviews";
+import { setReviewHidden } from "@/lib/admin";
 
 // Dùng sản phẩm riêng để không phụ thuộc dữ liệu thật trong DB dev.
 const HANDLE = `test-review-${randomUUID().slice(0, 8)}`;
@@ -72,6 +73,18 @@ describe("reviews", () => {
     await seedUser(userB, emailB);
     await seedOrder(userB, emailB, false);
     expect(await purchaseOrderId(HANDLE, { id: userB, email: emailB })).toBeNull();
+  });
+
+  it("review bị ẩn không tính vào list, avg hay stats của card", async () => {
+    const [review] = await listReviews(HANDLE);
+    await setReviewHidden(review.id, true);
+
+    expect(await listReviews(HANDLE)).toHaveLength(0);
+    expect(await reviewStats(HANDLE)).toEqual({ avg: null, count: 0 });
+    expect((await statsFor([HANDLE])).get(HANDLE)).toBeUndefined();
+
+    expect(await setReviewHidden(review.id, false)).toBe(HANDLE);
+    expect(await reviewStats(HANDLE)).toEqual({ avg: 3, count: 1 });
   });
 
   it("xoá review đưa số liệu về 0", async () => {

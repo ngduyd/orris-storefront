@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireManager, requireStaff } from "@/lib/auth";
-import { brandExists, getAdminProduct, renameBrand, setOrderStatus, setUserRole, updateProductRow, updateShipping, type OrderStatus } from "@/lib/admin";
+import { brandExists, getAdminProduct, renameBrand, setOrderStatus, setReviewHidden, setUserRole, updateProductRow, updateShipping, type OrderStatus } from "@/lib/admin";
 import { writeAudit } from "@/lib/audit";
 import { orderStatus } from "@/db/schema";
 
@@ -187,4 +187,26 @@ export async function saveUserRoleAction(fd: FormData) {
   await writeAudit({ actorId: actor.id, actorEmail: actor.email, action: "user.role", targetType: "user", targetId: id, detail: `role -> ${role}` });
   revalidatePath("/admin/users");
   redirect("/admin/users?saved=1");
+}
+
+export async function toggleReviewHiddenAction(fd: FormData) {
+  const actor = await requireManager();
+  const id = String(fd.get("id") ?? "");
+  const hide = String(fd.get("hide") ?? "") === "1";
+  const handle = id ? await setReviewHidden(id, hide) : null;
+  if (!handle) redirect("/admin/reviews?error=1");
+
+  await writeAudit({
+    actorId: actor.id,
+    actorEmail: actor.email,
+    action: hide ? "review.hide" : "review.show",
+    targetType: "review",
+    targetId: id,
+    detail: `${handle} · ${hide ? "hidden" : "shown"}`,
+  });
+  revalidatePath("/admin/reviews");
+  revalidatePath(`/product/${handle}`);
+  revalidatePath("/shop");
+  revalidatePath("/");
+  redirect("/admin/reviews?saved=1");
 }

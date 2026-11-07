@@ -9,6 +9,7 @@ const MANAGER_NAV = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/products", label: "Products" },
+  { href: "/admin/reviews", label: "Reviews" },
   { href: "/admin/brands", label: "Brands" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/stats", label: "Sales" },

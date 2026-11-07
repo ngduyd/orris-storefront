@@ -7,15 +7,21 @@ import { usd } from "@/lib/money";
 
 export const metadata = { title: "Checkout" };
 
-export default async function CheckoutPage() {
+export default async function CheckoutPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { lines, totalMinor, count } = await currentCart();
   const user = await currentUser();
   if (!user) redirect("/account/login?next=%2Fcheckout");
   if (!lines.length) redirect("/cart");
+  const { error } = await searchParams;
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12 sm:px-8">
       <h1 className="font-serif text-4xl font-light">Checkout</h1>
+      {error === "slow" ? (
+        <p role="alert" className="mt-6 border border-line bg-ivory-deep px-4 py-3 text-sm text-brass">
+          Too many checkout attempts from this network. Try again in an hour.
+        </p>
+      ) : null}
 
       <div className="mt-10 grid gap-12 md:grid-cols-[1.1fr_1fr]">
         <div>
