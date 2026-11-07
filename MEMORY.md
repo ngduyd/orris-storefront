@@ -22,6 +22,7 @@
 - Không còn việc dở. Ứng viên tiếp: deploy (Vercel/Fly) hoặc payOS nếu muốn thu tiền VND thật.
 
 ## Decisions
+- 2026-11-07 · Icon = brass ring + ink pupil (initial O of ORRIS), drawn as SVG in `web/src/app/icon.svg`; favicon.ico + apple-icon.png generated from it 180/48/32/16 · readable at 16px, no font dependency
 - 2026-11-06 · Role dùng chuỗi `customer|manager|carrier`, bỏ giá trị `admin` cũ (đã update row) · 1 nguồn nghĩa, layout admin đọc role để cắt nav.
 - 2026-11-06 · Carrier chỉ có 1 trang (Orders) và chỉ form vận chuyển; manager thấy hết · kiểm quyền ở cả page (requireManager) lẫn action, vì server action gọi trực tiếp được.
 - 2026-11-06 · Audit log là bảng chỉ-ghi, ghi ở action (login, product.update, order.status, order.shipping, user.role) · không log mọi request, tránh phình DB.
