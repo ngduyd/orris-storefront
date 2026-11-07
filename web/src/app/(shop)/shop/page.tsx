@@ -5,6 +5,7 @@ import { parseFilters, shopHref, type SearchParams } from "@/lib/filters";
 import { listProducts } from "@/lib/products";
 import { currentUser } from "@/lib/auth";
 import { wishedIn } from "@/lib/wishlist";
+import { statsFor } from "@/lib/reviews";
 
 export const metadata: Metadata = { title: "The collection" };
 
@@ -14,6 +15,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
   const { items, total, pages } = await listProducts(f);
   const viewer = await currentUser();
   const wished = await wishedIn(viewer?.id, items.map((i) => i.handle));
+  const reviews = await statsFor(items.map((i) => i.handle));
   const back = `/shop${Object.keys(sp).length ? `?${new URLSearchParams(sp as Record<string, string>)}` : ""}`;
 
   return (
@@ -37,7 +39,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
 
       {items.length ? (
         <div className="mt-10">
-          <ProductGrid items={items} wished={wished} back={back} />
+          <ProductGrid items={items} wished={wished} back={back} reviews={reviews} />
         </div>
       ) : (
         <div className="py-24 text-center text-sm text-taupe">

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ProductGrid } from "@/components/shop/product-card";
 import { currentUser } from "@/lib/auth";
 import { wishedIn } from "@/lib/wishlist";
+import { statsFor } from "@/lib/reviews";
 import { getBrands, getFacets, listProducts } from "@/lib/products";
 import { usd } from "@/lib/money";
 
@@ -23,6 +24,7 @@ export default async function Home() {
     .slice(0, 8);
   const viewer = await currentUser();
   const wished = await wishedIn(viewer?.id, [...bestsellers, ...arrivals].map((p) => p.handle));
+  const reviews = await statsFor([...bestsellers, ...arrivals].map((p) => p.handle));
 
   const genderCount = (g: string) => facets.byGender.find((x) => x.v === g)?.n ?? 0;
   const bottleCount = facets.byGender.reduce((s, g) => s + g.n, 0);
@@ -100,7 +102,7 @@ export default async function Home() {
           <Link href="/shop?sort=rating" className="label hover:text-ink">See all</Link>
         </div>
         <div className="mt-8">
-          <ProductGrid items={bestsellers} wished={wished} back="/" />
+          <ProductGrid items={bestsellers} wished={wished} back="/" reviews={reviews} />
         </div>
       </section>
 
@@ -160,7 +162,7 @@ export default async function Home() {
           <Link href="/shop?sort=new" className="label hover:text-ink">See all</Link>
         </div>
         <div className="mt-8">
-          <ProductGrid items={arrivals} wished={wished} back="/" />
+          <ProductGrid items={arrivals} wished={wished} back="/" reviews={reviews} />
         </div>
       </section>
 

@@ -5,7 +5,7 @@ import { discountPercent, onSale, sarNote, usd } from "@/lib/money";
 import { imageUrl } from "@/lib/image";
 import { toggleWishlistAction } from "@/actions/wishlist";
 
-export function ProductCard({ p, priority = false, wished = false, back = "/shop" }: { p: Product; priority?: boolean; wished?: boolean; back?: string }) {
+export function ProductCard({ p, priority = false, wished = false, back = "/shop", reviews }: { p: Product; priority?: boolean; wished?: boolean; back?: string; reviews?: { avg: number | null; count: number } }) {
   return (
     <div className="group relative">
       <Link href={`/product/${p.handle}`} className="block">
@@ -47,7 +47,12 @@ export function ProductCard({ p, priority = false, wished = false, back = "/shop
           {onSale(p) ? <span className="text-xs text-taupe line-through">{usd(p.compareAtMinor!)}</span> : null}
           <span className="text-taupe">· {p.sizeMl}ml</span>
         </p>
-        {p.rating !== null && p.ratingCount ? (
+        {reviews?.count ? (
+          <p className="mt-0.5 text-xs text-taupe">
+            <span className="text-brass">{"★".repeat(Math.round(reviews.avg ?? 0))}</span>{" "}
+            {reviews.avg?.toFixed(1)} · {reviews.count} review{reviews.count === 1 ? "" : "s"}
+          </p>
+        ) : p.rating !== null && p.ratingCount ? (
           <p className="mt-0.5 text-xs text-taupe">
             {Number(p.rating).toFixed(1)} / 5 · {p.ratingCount}
           </p>
@@ -57,11 +62,21 @@ export function ProductCard({ p, priority = false, wished = false, back = "/shop
   );
 }
 
-export function ProductGrid({ items, wished, back }: { items: Product[]; wished?: Set<string>; back?: string }) {
+export function ProductGrid({
+  items,
+  wished,
+  back,
+  reviews,
+}: {
+  items: Product[];
+  wished?: Set<string>;
+  back?: string;
+  reviews?: Map<string, { avg: number | null; count: number }>;
+}) {
   return (
     <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
       {items.map((p, i) => (
-        <ProductCard key={p.handle} p={p} priority={i < 4} wished={wished?.has(p.handle)} back={back} />
+        <ProductCard key={p.handle} p={p} priority={i < 4} wished={wished?.has(p.handle)} back={back} reviews={reviews?.get(p.handle)} />
       ))}
     </div>
   );

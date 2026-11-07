@@ -95,6 +95,20 @@ export const auditLogs = pgTable(
   (t) => [index("audit_created_idx").on(t.createdAt), index("audit_actor_idx").on(t.actorEmail)],
 );
 
+/** Customer reviews. One per account per product; the source-catalog rating stays as a fallback. */
+export const reviews = pgTable(
+  "reviews",
+  {
+    id: text("id").primaryKey(),
+    handle: text("handle").notNull(),
+    userId: text("user_id").notNull(),
+    rating: integer("rating").notNull(), // 1..5
+    body: text("body").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("reviews_handle_user_idx").on(t.handle, t.userId), index("reviews_handle_idx").on(t.handle)],
+);
+
 export const wishlist = pgTable(
   "wishlist",
   {

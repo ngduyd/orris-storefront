@@ -5,6 +5,8 @@ import { addToCartAction } from "@/actions/cart";
 import { toggleWishlistAction } from "@/actions/wishlist";
 import { NotePyramid } from "@/components/shop/note-pyramid";
 import { ProductGallery } from "@/components/shop/product-gallery";
+import { deleteReviewAction, submitReviewAction } from "@/actions/reviews";
+import { hasPurchased, listReviews, myReview, reviewStats } from "@/lib/reviews";
 import { getProduct } from "@/lib/products";
 import { currentUser } from "@/lib/auth";
 import { isWished } from "@/lib/wishlist";
@@ -33,6 +35,12 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
 
   const viewer = await currentUser();
   const wished = await isWished(viewer?.id, p.handle);
+  const [stats, reviewList, mine, bought] = await Promise.all([
+    reviewStats(p.handle),
+    listReviews(p.handle),
+    viewer ? myReview(p.handle, viewer.id) : null,
+    viewer ? hasPurchased(p.handle, viewer) : Promise.resolve(false),
+  ]);
 
   // each spec links to its matching filter page
   const specLink = (k: string, v: string) => {
@@ -91,12 +99,17 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
             </span>
           </div>
 
-          {p.rating !== null && p.ratingCount ? (
+          {stats.count ? (
             <p className="mt-2 text-sm text-taupe">
-              {Number(p.rating).toFixed(1)} / 5 · {p.ratingCount} ratings
+              <span className="text-ink">{stats.avg?.toFixed(1)} / 5</span> · {stats.count} review{stats.count === 1 ? "" : "s"}
+              {p.ratingCount ? <span className="ml-1">(catalog: {p.ratingCount})</span> : null}
+            </p>
+          ) : p.rating !== null && p.ratingCount ? (
+            <p className="mt-2 text-sm text-taupe">
+              {Number(p.rating).toFixed(1)} / 5 · {p.ratingCount} ratings from the source catalog — no store reviews yet
             </p>
           ) : (
-            <p className="mt-2 text-sm text-taupe">Not yet rated</p>
+            <p className="mt-2 text-sm text-taupe">No reviews yet</p>
           )}
 
           <form action={addToCartAction} className="mt-8 flex gap-3">
@@ -148,6 +161,72 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
               <p className="mt-3 text-sm leading-relaxed text-ink-soft">{p.description}</p>
             </details>
           ) : null}
+
+          <section id="reviews" className="mt-10 border-t border-line pt-6">
+            <div className="flex items-baseline justify-between">
+              <h2 className="label">Reviews{stats.count ? ` · ${stats.count}` : ""}</h2>
+              {reviewList.length ? <p className="label">latest {reviewList.length}</p> : null}
+            </div>
+
+            {reviewList.length ? (
+              <ul className="mt-4 divide-y divide-line/60">
+                {reviewList.map((r) => (
+                  <li key={r.id} className="py-4">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <p className="text-sm text-ink">
+                        <span className="text-brass">{"★".repeat(r.rating)}<span className="text-line">{"★".repeat(5 - r.rating)}</span></span>
+                        <span className="ml-2 text-taupe">{r.name ?? r.email.split("@")[0]}</span>
+                        <span className="ml-2 border border-line px-1.5 py-0.5 text-[0.55rem] uppercase tracking-[0.12em] text-taupe">verified purchase</span>
+                      </p>
+                      <p className="label shrink-0">{r.createdAt.toISOString().slice(0, 10)}</p>
+                    </div>
+                    {r.body ? <p className="mt-2 text-sm leading-relaxed text-ink-soft">{r.body}</p> : null}
+                    {viewer?.id === r.userId ? (
+                      <form action={deleteReviewAction} className="mt-2">
+                        <input type="hidden" name="handle" value={p.handle} />
+                        <button className="label min-h-6 text-taupe hover:text-ink">Delete my review</button>
+                      </form>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-taupe">No store reviews yet.</p>
+            )}
+
+            {bought || mine ? (
+            <form action={submitReviewAction} className="mt-6 border border-line p-4">
+              <input type="hidden" name="handle" value={p.handle} />
+              <p className="label">{mine ? "Edit your review" : "Write a review"}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <label className="label flex items-center gap-2">
+                  Rating
+                  <select name="rating" defaultValue={String(mine?.rating ?? 5)} className="border border-line bg-transparent px-2 py-1.5 text-sm focus:border-ink focus:outline-none">
+                    {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} ★</option>)}
+                  </select>
+                </label>
+                <textarea name="body" rows={3} defaultValue={mine?.body ?? ""} placeholder="How does it wear? Anything worth knowing?" className="min-w-56 flex-1 border border-line bg-transparent px-3 py-2 text-sm focus:border-ink focus:outline-none" />
+              </div>
+              <div className="mt-3 flex items-center gap-3">
+                <button className="border border-ink px-5 py-2 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
+                  {mine ? "Update review" : "Post review"}
+                </button>
+                <span className="text-xs text-taupe">One review per account; posting again edits it.</span>
+              </div>
+            </form>
+            ) : (
+              <p className="mt-6 border border-line bg-ivory-deep p-4 text-sm text-ink-soft">
+                {viewer ? (
+                  <>Reviews are open to verified buyers only. Order this bottle and the form appears here.</>
+                ) : (
+                  <>
+                    <Link href={`/account/login?next=${encodeURIComponent(`/product/${p.handle}`)}`} className="link-underline text-brass">Sign in</Link>{" "}
+                    to review this bottle — reviews are open to verified buyers only.
+                  </>
+                )}
+              </p>
+            )}
+          </section>
 
           <dl className="mt-10 grid grid-cols-1 gap-x-8 gap-y-3 border-t border-line pt-6 text-sm sm:grid-cols-2">
             {specs.map(([k, v]) => (
