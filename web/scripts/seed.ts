@@ -6,7 +6,12 @@ import { sql } from "drizzle-orm";
 import { db } from "../src/db";
 import { coupons, products } from "../src/db/schema";
 
-const CSV = join(process.cwd(), "..", "data/processed/products.csv");
+// the image ships web/data/products.csv; a dev checkout may still use the pipeline output
+const CSV = [
+  join(process.cwd(), "..", "data/processed/products.csv"),
+  join(process.cwd(), "data/products.csv"),
+  join(process.cwd(), "..", "web/data/products.csv"),
+].find((p) => existsSync(p)) ?? join(process.cwd(), "data/products.csv");
 const IMG_DIR = join(process.cwd(), "..", "data", "images_norm");
 // Local filenames are <handle>.<ext>, and the extension follows the magic bytes, so the directory
 // is read when present. Without it (a deploy that ships only the CSV) the Cloudinary public id is

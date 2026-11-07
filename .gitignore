@@ -1,5 +1,7 @@
 # dữ liệu: không commit (CSV, ảnh gốc, ảnh đã chuẩn hoá, manifest upload)
 data/
+# the catalogue CSV is small and baked into the migrator image
+!web/data/
 .pgdata/
 
 # bí mật

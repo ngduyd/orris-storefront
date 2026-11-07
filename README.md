@@ -71,8 +71,10 @@ npm run db:admin                        # manager account from ADMIN_EMAIL / ADM
 npx next dev -p 3000
 ```
 
-`data/` is not in the repo. Regenerate it with the python pipeline in `scripts/`, or use
-`web/scripts/seed-test.ts` — a 2,986-SKU synthetic fixture that CI uses. In a container the seeder
+`web/data/products.csv` (3.1 MB) is committed and baked into the migrator image, so `db:seed` works
+everywhere with no manual file copy. The images and the raw source stay out of the repo: regenerate
+them with the python pipeline in `scripts/`, or use `web/scripts/seed-test.ts` — a synthetic fixture
+CI uses. In a container the seeder
 only needs the CSV (`-v ./data/processed:/data/processed:ro`); without `data/images_norm` it falls
 back to `<handle>.webp`, which is the Cloudinary public id.
 
