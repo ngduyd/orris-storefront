@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getHandles } from "@/lib/products";
 
-/** Crawlers see the catalog as of the last daily build. */
-export const revalidate = 86400;
+/** Built per request: the image is built without a database, so prerendering would ship an empty map. */
+export const dynamic = "force-dynamic";
 
 const base = process.env.SITE_URL ?? "http://localhost:3000";
 
