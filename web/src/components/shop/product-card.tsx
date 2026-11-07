@@ -10,7 +10,11 @@ export function ProductCard({ p, priority = false, wished = false, back = "/shop
     <div className="group relative">
       <Link href={`/product/${p.handle}`} className="block">
         <div className="relative aspect-4/5 overflow-hidden bg-ivory-deep">
-          {onSale(p) ? (
+          {p.stock <= 0 ? (
+            <span className="absolute top-2 left-2 z-10 bg-ink px-2 py-1 text-[0.6rem] uppercase tracking-[0.14em] text-ivory">
+              Sold out
+            </span>
+          ) : onSale(p) ? (
             <span className="absolute top-2 left-2 z-10 bg-brass px-2 py-1 text-[0.6rem] uppercase tracking-[0.14em] text-ivory">
               −{discountPercent(p)}%
             </span>

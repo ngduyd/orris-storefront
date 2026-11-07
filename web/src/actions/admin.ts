@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireManager, requireStaff } from "@/lib/auth";
 import { cancelOrder, refundOrder } from "@/lib/orders";
-import { sendShippingNotice } from "@/lib/bill";
+import { sendOrderClosed, sendShippingNotice } from "@/lib/bill";
 import {
   brandExists,
   getAdminProduct,
@@ -166,6 +166,10 @@ export async function refundOrderAction(fd: FormData) {
   const id = String(fd.get("id") ?? "");
   if (!id) redirect("/admin/orders");
   const ok = await refundOrder(id, actor.email);
+  if (ok) {
+    const h = await headers();
+    await sendOrderClosed(id, h.get("origin") ?? `http://${h.get("host")}`, "refunded");
+  }
   revalidatePath("/admin/orders");
   redirect(`/admin/orders/${encodeURIComponent(id)}?${ok ? "saved=1" : "error=norefund"}`);
 }

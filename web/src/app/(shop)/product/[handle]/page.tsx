@@ -12,7 +12,7 @@ import { listReviews, myReview, purchaseOrderId, reviewStats } from "@/lib/revie
 import { getProduct } from "@/lib/products";
 import { currentUser } from "@/lib/auth";
 import { isWished } from "@/lib/wishlist";
-import { discountPercent, onSale, sarNote, usd } from "@/lib/money";
+import { SAR_PER_USD, discountPercent, onSale, sarNote, usd } from "@/lib/money";
 import { imageUrl } from "@/lib/image";
 
 // prerendering 3,051 pages hung the build for >15 minutes; ISR gives the same output quickly
@@ -67,8 +67,26 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
     ["Year", p.year ? String(p.year) : null],
   ].filter((s): s is [string, string] => Boolean(s[1]));
 
+  // structured data for search engines; aggregateRating only when real reviews exist
+  const structured = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: `${p.title} · ${p.brand}`,
+    brand: { "@type": "Brand", name: p.brand },
+    image: imageUrl(p.image, 1200),
+    description: (p.description ?? `${p.title} by ${p.brand}, ${p.sizeMl}ml.`).slice(0, 300),
+    offers: {
+      "@type": "Offer",
+      price: (p.priceMinor / SAR_PER_USD / 100).toFixed(2),
+      priceCurrency: "USD",
+      availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+    },
+    ...(stats.count > 0 && stats.avg !== null ? { aggregateRating: { "@type": "AggregateRating", ratingValue: stats.avg.toFixed(1), reviewCount: stats.count } } : {}),
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }} />
       <nav className="label flex gap-2">
         <Link href="/shop" className="link-underline hover:text-ink">Collection</Link>
         <span>/</span>

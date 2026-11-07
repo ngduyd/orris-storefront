@@ -93,3 +93,19 @@ export async function confirmSessionPaid(
   // cancelled or stock released: the hold is gone, so the payment cannot buy anything
   return (await refundLatePayment(orderId, sessionId, paymentIntent)) ? "refunded" : "failed";
 }
+
+/** Money went back or the order was killed: the customer must hear it, once. */
+export async function sendOrderClosed(orderId: string, origin: string, reason: "cancelled" | "refunded") {
+  const order = await getOrder(orderId);
+  if (!order) return;
+  const subject = reason === "cancelled" ? `Order ${orderId.slice(0, 8)} cancelled` : `Refund issued for order ${orderId.slice(0, 8)}`;
+  const body =
+    reason === "cancelled"
+      ? `Order ${orderId.slice(0, 8)} was cancelled and nothing was charged.\n\nYour items are back in stock.\n\nView: ${origin}/checkout/${orderId}`
+      : `We refunded ${usd(order.totalMinor)} for order ${orderId.slice(0, 8)}. It usually lands on your card within 5-10 business days.\n\nView: ${origin}/checkout/${orderId}`;
+  try {
+    await sendMail({ to: order.email, subject, text: body });
+  } catch (e) {
+    console.error("sendOrderClosed failed:", e instanceof Error ? e.message.slice(0, 100) : e);
+  }
+}

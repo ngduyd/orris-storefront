@@ -160,3 +160,30 @@ describe("shipping transitions", () => {
     expect(await updateShipping(orderId, { carrier: "SMSA", trackingCode: "A4", status: "delivered" })).toBe("shipped");
   });
 });
+
+describe("refund", () => {
+  it("restores stock exactly once and refuses the second call", async () => {
+    const { refundOrder } = await import("@/lib/orders");
+    await seedProduct();
+    const orderId = randomUUID();
+    await db.insert(orders).values({
+      id: orderId,
+      email: `refund-${orderId.slice(0, 8)}@example.com`,
+      status: "paid",
+      paid: true,
+      totalMinor: 20000,
+      reservedUntil: null,
+      stockReleased: false,
+    });
+    await db.insert(orderItems).values({ id: randomUUID(), orderId, handle: HANDLE, title: "Reservation Fixture", qty: 2, priceMinor: 10000 });
+    await db.update(products).set({ stock: 98 }).where(eq(products.handle, HANDLE));
+
+    expect(await refundOrder(orderId, "manager@orris.local")).toBe(true);
+    const [after] = await db.select({ stock: products.stock, status: orders.status, paid: orders.paid, released: orders.stockReleased }).from(products).innerJoin(orders, eq(orders.id, orderId)).where(eq(products.handle, HANDLE));
+    expect(after).toEqual({ stock: 100, status: "refunded", paid: false, released: true });
+
+    expect(await refundOrder(orderId, "manager@orris.local")).toBe(false);
+    const [again] = await db.select({ stock: products.stock }).from(products).where(eq(products.handle, HANDLE));
+    expect(again.stock).toBe(100); // no double restore
+  });
+});
