@@ -1,14 +1,14 @@
 "use server";
 
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
-import { hashPassword } from "@/lib/password";
-import { signIn, signOut } from "@/lib/auth";
+import { hashPassword, verifyPassword } from "@/lib/password";
+import { SESSION_COOKIE, currentUser, signIn, signOut } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { consumeToken, issueToken, pruneTokens } from "@/lib/tokens";
 import { currentUser } from "@/lib/auth";
@@ -133,6 +133,24 @@ export async function resendVerifyAction() {
     text: `Confirm your email address:\n\n${await origin()}/account/verify?token=${token}\n\nThe link expires in 24 hours.`,
   });
   redirect("/account?verify=sent");
+}
+
+export async function changePasswordAction(fd: FormData) {
+  const user = await currentUser();
+  if (!user) redirect("/account/login");
+
+  const currentPassword = String(fd.get("currentPassword") ?? "");
+  const newPassword = String(fd.get("newPassword") ?? "");
+  if (newPassword.length < 8) redirect("/account?pw=short");
+
+  const [row] = await db.select({ hash: users.passwordHash }).from(users).where(eq(users.id, user.id)).limit(1);
+  if (!row?.hash) redirect("/account?pw=google"); // Google-only account
+  if (!(await verifyPassword(currentPassword, row.hash))) redirect("/account?pw=wrong");
+
+  await db.update(users).set({ passwordHash: await hashPassword(newPassword) }).where(eq(users.id, user.id));
+  const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
+  await db.delete(sessions).where(and(eq(sessions.userId, user.id), sessionId ? ne(sessions.id, sessionId) : undefined));
+  redirect("/account?pw=ok");
 }
 
 export async function verifyEmailAction(fd: FormData) {

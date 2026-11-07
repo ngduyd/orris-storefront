@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { orderItems, orders, products, users, type orderStatus } from "@/db/schema";
+import { orderItems, orders, products, reviews, users, type orderStatus } from "@/db/schema";
 
 export const ADMIN_PAGE_SIZE = 20;
 
@@ -195,4 +195,32 @@ export async function brandExists(name: string) {
 export async function renameBrand(from: string, to: string) {
   const rows = await db.update(products).set({ brand: to, updatedAt: new Date() }).where(eq(products.brand, from)).returning({ handle: products.handle });
   return rows.length;
+}
+
+/** Newest reviews for the moderation queue, hidden ones included. */
+export async function listReviewsForAdmin(limit = 50) {
+  return db
+    .select({
+      id: reviews.id,
+      handle: reviews.handle,
+      title: products.title,
+      brand: products.brand,
+      rating: reviews.rating,
+      body: reviews.body,
+      authorName: reviews.authorName,
+      email: users.email,
+      hidden: reviews.hidden,
+      createdAt: reviews.createdAt,
+    })
+    .from(reviews)
+    .innerJoin(users, eq(users.id, reviews.userId))
+    .leftJoin(products, eq(products.handle, reviews.handle))
+    .orderBy(desc(reviews.createdAt))
+    .limit(limit);
+}
+
+/** Returns the review's product handle, or null when the id does not exist. */
+export async function setReviewHidden(id: string, hidden: boolean) {
+  const [row] = await db.update(reviews).set({ hidden }).where(eq(reviews.id, id)).returning({ handle: reviews.handle });
+  return row?.handle ?? null;
 }

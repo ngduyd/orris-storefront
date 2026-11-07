@@ -20,7 +20,7 @@ export async function listReviews(handle: string, limit = 20) {
     })
     .from(reviews)
     .innerJoin(users, eq(users.id, reviews.userId))
-    .where(eq(reviews.handle, handle))
+    .where(and(eq(reviews.handle, handle), eq(reviews.hidden, false)))
     .orderBy(desc(reviews.createdAt))
     .limit(limit);
 }
@@ -29,7 +29,7 @@ export async function reviewStats(handle: string): Promise<ReviewStats> {
   const [row] = await db
     .select({ avg: sql<string | null>`avg(${reviews.rating})`, count: sql<number>`count(*)::int` })
     .from(reviews)
-    .where(eq(reviews.handle, handle));
+    .where(and(eq(reviews.handle, handle), eq(reviews.hidden, false)));
   return { avg: row?.avg === null || row?.avg === undefined ? null : Number(row.avg), count: row?.count ?? 0 };
 }
 
@@ -56,7 +56,7 @@ export async function statsFor(handles: string[]) {
   const rows = await db
     .select({ handle: reviews.handle, avg: sql<string>`avg(${reviews.rating})`, count: sql<number>`count(*)::int` })
     .from(reviews)
-    .where(inArray(reviews.handle, handles))
+    .where(and(inArray(reviews.handle, handles), eq(reviews.hidden, false)))
     .groupBy(reviews.handle);
   return new Map(rows.map((r) => [r.handle, { avg: Number(r.avg), count: r.count }]));
 }

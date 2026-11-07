@@ -50,4 +50,6 @@ The image does **not** contain `public/images` (a symlink into `data/images_norm
 
 ## Environment
 
-See `.env.example`. Required: `DATABASE_URL`, `CLOUDINARY_CLOUD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Optional: `SMTP_*` + `MAIL_FROM` (links are printed to the server console when unset), `GOOGLE_CLIENT_ID/SECRET` (redirect URI `<origin>/api/auth/google/callback`), `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (the pay button is hidden without them).
+See `.env.example`. Required: `DATABASE_URL`, `CLOUDINARY_CLOUD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Optional: `SMTP_*` + `MAIL_FROM` (links are printed to the server console when unset), `GOOGLE_CLIENT_ID/SECRET` (redirect URI `<origin>/api/auth/google/callback`), `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (the pay button is hidden without them), `REQUIRE_VERIFIED_EMAIL=true` (refuse checkout from accounts whose email is not verified; Google accounts are exempt; default off).
+
+Checkout is rate limited to 20 attempts per hour per IP (first `x-forwarded-for` hop) and redirects back with `?error=slow`.
