@@ -17,6 +17,8 @@ const baseline = new Map<string, number>(
 );
 
 async function freshCart() {
+  // stock phải do test tự đặt: dữ liệu demo có thể đã bị các lần chạy trước trừ về 0
+  await db.update(products).set({ stock: 100 }).where(inArray(products.handle, [H, H2]));
   const cartId = randomUUID();
   const rec = { cartId, orderIds: [] as string[] };
   cleanup.push(rec);

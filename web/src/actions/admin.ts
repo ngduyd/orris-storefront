@@ -4,13 +4,19 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireManager, requireStaff } from "@/lib/auth";
-<<<<<<< HEAD
-import { brandExists, getAdminProduct, renameBrand, setOrderStatus, setReviewHidden, setUserRole, updateProductRow, updateShipping, type OrderStatus } from "@/lib/admin";
 import { cancelOrder, refundOrder } from "@/lib/orders";
-=======
 import { sendShippingNotice } from "@/lib/bill";
-import { brandExists, getAdminProduct, renameBrand, setOrderStatus, setUserRole, updateProductRow, updateShipping, type OrderStatus } from "@/lib/admin";
->>>>>>> wt-c
+import {
+  brandExists,
+  getAdminProduct,
+  renameBrand,
+  setOrderStatus,
+  setReviewHidden,
+  setUserRole,
+  updateProductRow,
+  updateShipping,
+  type OrderStatus,
+} from "@/lib/admin";
 import { writeAudit } from "@/lib/audit";
 import { orderStatus } from "@/db/schema";
 

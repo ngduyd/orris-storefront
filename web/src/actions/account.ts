@@ -11,7 +11,6 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { SESSION_COOKIE, currentUser, signIn, signOut } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { consumeToken, issueToken, pruneTokens } from "@/lib/tokens";
-import { currentUser } from "@/lib/auth";
 import { clearFailures, clientIp, hit, noteFailure, tooMany } from "@/lib/rate-limit";
 
 const credentials = z.object({
