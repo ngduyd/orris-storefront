@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: orris-prod-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-shopify}
@@ -34,7 +33,6 @@ services:
 
   app:
     image: ${ORRIS_IMAGE:-ghcr.io/ngduyd/orris-storefront:latest}
-    container_name: orris-prod-app
     restart: unless-stopped
     depends_on:
       db:

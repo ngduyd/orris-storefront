@@ -98,9 +98,10 @@ same database (or drop `db` and point `DATABASE_URL` at a managed one).
 tree that was not built by CI. `release.yml` publishes two tags per commit — `latest` (the
 runner) and `migrator` (the same Dockerfile with drizzle-kit for `db:push`).
 
-`migrate` is behind a profile, so `up` never starts it: run it explicitly
-(`run --rm migrate`), which also keeps podman-compose happy — it hangs when a one-shot service is
-a `depends_on` target. On a blank volume the schema is created by that one command. The catalogue still has to be loaded separately (the image does not ship `data/`).
+`scripts/deploy.sh` does the three steps in order and works with docker or podman.
+`migrate` sits behind a profile, so `up` never starts it and never waits on it — podman-compose
+hangs when a one-shot service is a `depends_on` target. The deploy job in `release.yml` runs the
+same sequence over SSH, so a push to master is all it takes. The catalogue still has to be loaded separately (the image does not ship `data/`).
 
 ## Environment
 
