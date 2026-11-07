@@ -122,7 +122,7 @@ export default async function OrderPage({
       <div className="mt-10 border-t border-line pt-6">
         <p className="label">Progress</p>
         <ol className="mt-4 space-y-3 text-sm">
-          {STEPS.map((step, i) => {
+          {STEPS.map((step) => {
             const done = STEP_ORDER.indexOf(order.status) >= STEP_ORDER.indexOf(step.status);
             return (
               <li key={step.status} className="flex items-center gap-3">

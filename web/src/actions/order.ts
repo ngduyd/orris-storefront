@@ -32,7 +32,7 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
   // signed-in checkout: the account is the identity, the IP only adds a per-network limit when known
   const ip = await clientIp();
   const rateKey = ip ? `checkout-ip:${ip}` : `checkout-user:${user.id}`;
-  if (tooMany(rateKey, 20, HOUR)) redirect("/checkout?error=slow");
+  if (tooMany(rateKey, 20)) redirect("/checkout?error=slow");
   noteFailure(rateKey, HOUR);
 
   if (process.env.REQUIRE_VERIFIED_EMAIL === "true") {

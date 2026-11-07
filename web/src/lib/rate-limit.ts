@@ -6,7 +6,7 @@ import { headers } from "next/headers";
  */
 const hits = new Map<string, { n: number; until: number }>();
 
-export function tooMany(key: string, limit = 5, windowMs = 15 * 60 * 1000) {
+export function tooMany(key: string, limit = 5) {
   const now = Date.now();
   const row = hits.get(key);
   if (!row || row.until < now) return false;
@@ -26,7 +26,7 @@ export function clearFailures(key: string) {
 
 /** Fixed-window counter: counts this call, returns true once the limit is reached. */
 export function hit(key: string, limit: number, windowMs: number) {
-  if (tooMany(key, limit, windowMs)) return true;
+  if (tooMany(key, limit)) return true;
   noteFailure(key, windowMs);
   return false;
 }

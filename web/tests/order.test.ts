@@ -82,7 +82,6 @@ describe("placeOrder", () => {
 
   it("vượt stock -> OUT_OF_STOCK, không trừ kho", async () => {
     const c = await freshCart();
-    const [before] = await db.select({ stock: products.stock }).from(products).where(eq(products.handle, H2));
     await addLine(c.cartId, H2, 1);
     await db.update(products).set({ stock: 0 }).where(eq(products.handle, H2));
 
@@ -97,7 +96,6 @@ describe("placeOrder", () => {
 describe("duplicate submit & concurrency", () => {
   it("submit lần 2 cùng cart -> EMPTY_CART, không tạo đơn thứ hai", async () => {
     const c = await freshCart();
-    const [before] = await db.select({ stock: products.stock }).from(products).where(eq(products.handle, H));
     await addLine(c.cartId, H, 1);
     const input = { cartId: c.cartId, email: "a@b.co", name: "Test", address: "Somewhere 1" };
     const first = await placeOrder(input);
@@ -109,7 +107,6 @@ describe("duplicate submit & concurrency", () => {
 
   it("2 request song song -> chỉ 1 đơn, stock không âm", async () => {
     const c = await freshCart();
-    const [before] = await db.select({ stock: products.stock }).from(products).where(eq(products.handle, H2));
     await db.update(products).set({ stock: 1 }).where(eq(products.handle, H2));
     await addLine(c.cartId, H2, 1);
 

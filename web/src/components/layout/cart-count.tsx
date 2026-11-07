@@ -1,18 +1,15 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 /** Item count badge: reads the `cart_n` cookie so the header stays static. */
+const subscribe = () => () => {};
+const read = () => Number(document.cookie.match(/(?:^|; )cart_n=(\d+)/)?.[1] ?? 0);
+
 export function CartCount() {
-  const pathname = usePathname();
-  const [n, setN] = useState(0);
-
-  useEffect(() => {
-    const m = document.cookie.match(/(?:^|; )cart_n=(\d+)/);
-    setN(m ? Number(m[1]) : 0);
-  }, [pathname]);
-
+  usePathname(); // a new snapshot is read on every navigation
+  const n = useSyncExternalStore(subscribe, read, () => 0);
   if (!n) return null;
   return <span className="ml-1.5 text-brass">{n}</span>;
 }

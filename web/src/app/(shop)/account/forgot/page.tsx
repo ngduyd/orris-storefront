@@ -24,7 +24,7 @@ export default async function ForgotPage({ searchParams }: { searchParams: Promi
           {error === "slow" ? (
             <p className="text-sm text-brass">Too many reset requests. Try again in an hour.</p>
           ) : error ? (
-            <p className="text-sm text-brass">That email doesn't look valid.</p>
+            <p className="text-sm text-brass">That email does not look valid.</p>
           ) : null}
           <button className="w-full border border-ink px-6 py-3 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
             Send reset link

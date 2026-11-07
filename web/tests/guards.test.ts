@@ -7,15 +7,15 @@ afterEach(() => clearFailures("t:key"));
 describe("rate limit", () => {
   it("allows up to the limit, then refuses inside the window", () => {
     for (let i = 0; i < 3; i++) noteFailure("t:key", 60_000);
-    expect(tooMany("t:key", 3, 60_000)).toBe(true);
-    expect(tooMany("t:key", 4, 60_000)).toBe(false);
+    expect(tooMany("t:key", 3)).toBe(true);
+    expect(tooMany("t:key", 4)).toBe(false);
   });
 
   it("a different key is unaffected, and clearing forgets the history", () => {
     noteFailure("t:key", 60_000);
-    expect(tooMany("t:other", 1, 60_000)).toBe(false);
+    expect(tooMany("t:other", 1)).toBe(false);
     clearFailures("t:key");
-    expect(tooMany("t:key", 1, 60_000)).toBe(false);
+    expect(tooMany("t:key", 1)).toBe(false);
   });
 });
 
