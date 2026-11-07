@@ -20,7 +20,9 @@ The catalog CSV and images are **not** in the repo (see `.gitignore`: `data/`). 
 
 ```bash
 cp .env.example .env          # DATABASE_URL can be skipped: compose derives it from POSTGRES_*
-docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml run --rm migrate    # creates/updates the schema
+docker compose -f docker-compose.prod.yml up -d
 
 The prod file only pulls (`image:` only, no `build:`). To run your own build, tag the images by
 hand: `docker build -f Dockerfile --target runner -t ghcr.io/ngduyd/orris-storefront:latest .`

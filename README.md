@@ -81,6 +81,7 @@ cp .env.example .env
 # either use the image CI published (the package is private: log in once)
 docker login ghcr.io -u <user> -p <token>
 docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml run --rm migrate   # schema, once per deploy
 docker compose -f docker-compose.prod.yml up -d
 # this file never builds; to run a local build instead, tag it by hand first
 docker build -f web/Dockerfile --target runner  -t ghcr.io/ngduyd/orris-storefront:latest   web
@@ -96,8 +97,9 @@ same database (or drop `db` and point `DATABASE_URL` at a managed one).
 tree that was not built by CI. `release.yml` publishes two tags per commit — `latest` (the
 runner) and `migrator` (the same Dockerfile with drizzle-kit for `db:push`).
 
-`migrate` runs `drizzle-kit push` once and must finish before `app` starts, so a blank volume
-comes up working. The catalogue still has to be loaded separately (the image does not ship `data/`).
+`migrate` is behind a profile, so `up` never starts it: run it explicitly
+(`run --rm migrate`), which also keeps podman-compose happy — it hangs when a one-shot service is
+a `depends_on` target. On a blank volume the schema is created by that one command. The catalogue still has to be loaded separately (the image does not ship `data/`).
 
 ## Environment
 

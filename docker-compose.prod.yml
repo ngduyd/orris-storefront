@@ -15,11 +15,13 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 30s
 
   migrate:
-    # published by release.yml; this file only pulls, it never builds
+    # opt-in: `docker compose run --rm migrate` (or podman) — never started by `up`, because
+    # podman-compose hangs waiting on the completion of a one-shot dependency
+    profiles: ["migrate"]
     image: ${ORRIS_MIGRATOR_IMAGE:-ghcr.io/ngduyd/orris-storefront:migrator}
-    container_name: orris-prod-migrate
     restart: "no"
     depends_on:
       db:
@@ -33,8 +35,8 @@ services:
     container_name: orris-prod-app
     restart: unless-stopped
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     env_file:
       - path: .env.production
         required: false
