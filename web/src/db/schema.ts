@@ -105,6 +105,7 @@ export const reviews = pgTable(
     rating: integer("rating").notNull(), // 1..5
     authorName: text("author_name"),
     orderId: text("order_id").notNull(), // the paid order this review is anchored to
+    hidden: boolean("hidden").notNull().default(false), // hidden by a manager
     body: text("body").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -157,11 +158,19 @@ export const orders = pgTable(
     currency: text("currency").notNull().default("SAR"),
     carrier: text("carrier"), // shipping company
     trackingCode: text("tracking_code"),
-    stripeId: text("stripe_id"),
+    stripeId: text("stripe_id"), // checkout session id (unique when set)
+    stripePaymentIntent: text("stripe_payment_intent"), // needed for refunds
+    stockReleased: boolean("stock_released").notNull().default(false), // stock already returned
+    reservedUntil: timestamp("reserved_until", { withTimezone: true }), // stock held until this moment
     paid: boolean("paid").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("orders_email_idx").on(t.email), index("orders_status_idx").on(t.status)],
+  (t) => [
+    index("orders_email_idx").on(t.email),
+    index("orders_status_idx").on(t.status),
+    uniqueIndex("orders_stripe_id_uniq").on(t.stripeId), // one checkout session per order
+    index("orders_reservation_idx").on(t.status, t.reservedUntil),
+  ],
 );
 
 export const orderItems = pgTable(
