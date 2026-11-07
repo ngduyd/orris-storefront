@@ -19,9 +19,8 @@ services:
       start_period: 30s
 
   migrate:
-    # opt-in: `docker compose run --rm migrate` (or podman) — never started by `up`, because
-    # podman-compose hangs waiting on the completion of a one-shot dependency
-    profiles: ["migrate"]
+    # one-shot: started with `run --rm migrate`, and `up` is always given explicit services
+    # (db app) so it is never pulled in as a long-running container
     image: ${ORRIS_MIGRATOR_IMAGE:-ghcr.io/ngduyd/orris-storefront:migrator}
     restart: "no"
     depends_on:

@@ -7,23 +7,24 @@ cd "$(dirname "$0")/.."
 COMPOSE=${COMPOSE:-"docker compose"}
 command -v docker >/dev/null 2>&1 || COMPOSE="podman compose"
 FILE="-f docker-compose.prod.yml"
+USER_DB=${POSTGRES_USER:-shopify}
 
 echo "==> pulling images"
 $COMPOSE $FILE pull
 
 echo "==> starting the database"
-$COMPOSE $FILE up -d db
+$COMPOSE $FILE up -d db >/dev/null
 
 echo -n "==> waiting for postgres"
 for _ in $(seq 1 60); do
-  if $COMPOSE $FILE exec -T db pg_isready -q -U "${POSTGRES_USER:-shopify}" 2>/dev/null; then
+  if $COMPOSE $FILE exec -T db pg_isready -q -U "$USER_DB" >/dev/null 2>&1; then
     echo " ready"
     break
   fi
   echo -n "."
   sleep 2
 done
-$COMPOSE $FILE exec -T db pg_isready -q -U "${POSTGRES_USER:-shopify}" || {
+$COMPOSE $FILE exec -T db pg_isready -q -U "$USER_DB" >/dev/null 2>&1 || {
   echo
   echo "postgres did not become ready; check: $COMPOSE $FILE logs db" >&2
   exit 1
@@ -31,10 +32,10 @@ $COMPOSE $FILE exec -T db pg_isready -q -U "${POSTGRES_USER:-shopify}" || {
 
 if [ "${1:-}" != "--no-migrate" ]; then
   echo "==> applying schema"
-  # --no-deps: do not re-create db (podman-compose does, and collides)
   $COMPOSE $FILE run --rm --no-deps migrate
 fi
 
 echo "==> starting the app"
-$COMPOSE $FILE up -d
+# explicit services: the one-shot migrate must never be started by `up`
+$COMPOSE $FILE up -d db app
 $COMPOSE $FILE ps

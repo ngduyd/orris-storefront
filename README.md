@@ -99,10 +99,11 @@ is deliberate: podman-compose does not expand nested defaults such as `${A:-${B}
 tree that was not built by CI. `release.yml` publishes two tags per commit — `latest` (the
 runner) and `migrator` (the same Dockerfile with drizzle-kit for `db:push`).
 
-`scripts/deploy.sh` does the three steps in order and works with docker or podman.
-`migrate` sits behind a profile, so `up` never starts it and never waits on it — podman-compose
-hangs when a one-shot service is a `depends_on` target. The deploy job in `release.yml` runs the
-same sequence over SSH, so a push to master is all it takes. The catalogue still has to be loaded separately (the image does not ship `data/`).
+`scripts/deploy.sh` does the steps in order and works with docker or podman: `up -d db`, wait for
+`pg_isready`, `run --rm --no-deps migrate`, then `up -d db app`. The one-shot `migrate` service is
+never part of `up` (it is named explicitly nowhere) because podman-compose hangs when a one-shot
+container is a `depends_on` target, and it cannot `run` a service that sits behind a profile. The
+deploy job in `release.yml` runs the same script over SSH, so a push to master is all it takes. The catalogue still has to be loaded separately (the image does not ship `data/`).
 
 ## Environment
 
