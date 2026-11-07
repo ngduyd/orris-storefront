@@ -11,7 +11,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-CMD ["npm", "run", "db:push"]
+# pg_trgm first: the schema has a gin_trgm_ops index, and an existing volume never runs
+# docker-entrypoint-initdb.d/init-extensions.sql
+CMD ["sh", "-c", "node scripts/ensure-extensions.mjs && npm run db:push"]
 
 FROM node:22-alpine AS runner
 WORKDIR /app
