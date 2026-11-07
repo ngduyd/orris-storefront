@@ -88,35 +88,30 @@ export async function FilterBar({ sp }: { sp: SearchParams }) {
   return (
     <div className="border-y border-line">
       {searchBox}
-      {/* mobile: collapsed, opened with <details> — no JS */}
-      <details className="group/filterbar md:hidden">
-        <summary className="flex cursor-pointer list-none items-center justify-between py-4 [&::-webkit-details-marker]:hidden">
+
+      <details open className="group/filters border-t border-line">
+        <summary className="flex cursor-pointer list-none items-center justify-between py-4 marker:content-none [&::-webkit-details-marker]:hidden">
           <span className="label flex items-center gap-2 text-ink">
             Filter & sort
-            <span aria-hidden className="transition-transform duration-300 ease-[var(--ease-out-soft)] group-open/filterbar:rotate-180">▾</span>
+            <span aria-hidden className="text-taupe transition-transform duration-300 ease-[var(--ease-out-soft)] group-open/filters:rotate-90">›</span>
           </span>
-          <span className="label">
-            {active.length ? `${active.length} active` : sortLabel}
-          </span>
+          <span className="label">{active.length ? `${active.length} active` : sortLabel}</span>
         </summary>
-        <div className="pb-5">{groups}</div>
-      </details>
 
-      <div className="hidden py-4 md:block">{groups}</div>
+        <div className="space-y-2 pb-5">
+          {groups}
+        </div>
+      </details>
     </div>
   );
 }
 
-/** Filter section: collapsible but open by default, no JS. */
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <details open className="group/section border-b border-line/60 py-3 last:border-0">
-      <summary className="label flex cursor-pointer list-none items-center gap-2 marker:content-none [&::-webkit-details-marker]:hidden">
-        <span aria-hidden className="text-taupe transition-transform duration-300 ease-[var(--ease-out-soft)] group-open/section:rotate-90">›</span>
-        {label}
-      </summary>
-      <div className="mt-3 flex flex-wrap gap-2 pl-4">{children}</div>
-    </details>
+    <div className="flex flex-wrap items-center gap-2 py-1.5">
+      <span className="label w-14 shrink-0">{label}</span>
+      <div className="flex flex-1 flex-wrap gap-2">{children}</div>
+    </div>
   );
 }
 
