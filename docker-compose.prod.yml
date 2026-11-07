@@ -11,7 +11,9 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./init-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shopify} -d ${POSTGRES_DB:-shopify} && psql -U ${POSTGRES_USER:-shopify} -d ${POSTGRES_DB:-shopify} -tAc \"SELECT 1 FROM pg_extension WHERE extname='pg_trgm'\" | grep -q 1"]
+      # pg_trgm is verified by the migrate step, not here: a volume that predates the init script
+      # would otherwise keep the container unhealthy forever and block the app
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shopify} -d ${POSTGRES_DB:-shopify}"]
       interval: 5s
       timeout: 3s
       retries: 10

@@ -81,7 +81,8 @@ cp .env.example .env
 # either use the image CI published (the package is private: log in once)
 docker login ghcr.io -u <user> -p <token>
 docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml run --rm migrate   # schema, once per deploy
+# schema, once per deploy; also creates pg_trgm on a volume that predates init-extensions.sql
+docker compose -f docker-compose.prod.yml run --rm migrate
 docker compose -f docker-compose.prod.yml up -d
 # this file never builds; to run a local build instead, tag it by hand first
 docker build -f web/Dockerfile --target runner  -t ghcr.io/ngduyd/orris-storefront:latest   web
