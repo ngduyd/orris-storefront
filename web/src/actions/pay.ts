@@ -3,12 +3,13 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type Stripe from "stripe";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, like, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { getOrder } from "@/lib/orders";
 import { confirmSessionPaid } from "@/lib/bill";
 import { currentUser } from "@/lib/auth";
+import { canAccessOrder } from "@/lib/order-access";
 import { usdMinor } from "@/lib/money";
 import { stripe } from "@/lib/stripe";
 
@@ -21,7 +22,11 @@ const STRIPE_MIN_MINUTES = 30;
 /** A hold may be extended once at pay time, but never past this order age: stock is not held forever. */
 const HOLD_CAP_MINUTES = 90;
 /** Written into stripe_id by the claim so a second click cannot create a second session. */
-const claimKey = (orderId: string) => `claim:${orderId}`;
+const CLAIM_STALE_MS = 2 * 60 * 1000;
+/** Placeholder claim: `claim:<orderId>:<epochMillis>` so a crashed attempt can be reclaimed. */
+const claimKey = (orderId: string) => `claim:${orderId}:${Date.now()}`;
+const isClaim = (id: string | null | undefined) => Boolean(id?.startsWith("claim:"));
+const claimEpoch = (id: string) => Number(id.split(":")[2] ?? 0);
 
 const outcomeQuery = (outcome: "paid" | "refunded" | "failed") =>
   outcome === "refunded" ? "?refunded=1" : outcome === "failed" ? "?error=refund" : "";
@@ -55,7 +60,7 @@ export async function payAction(fd: FormData) {
   const order = await getOrder(orderId);
   if (!order) redirect("/shop");
   // server actions can be called directly: check permissions here, do not trust the page
-  if (!viewer || (order.userId !== viewer.id && order.email !== viewer.email)) redirect("/shop");
+  if (!canAccessOrder(viewer, order)) redirect("/shop");
   if (order.paid) redirect(`/checkout/${orderId}`);
   // the hold is over: nothing to pay for, the stock already went back
   if (order.status !== "pending" || order.stockReleased) redirect(`/checkout/${orderId}`);
@@ -66,7 +71,8 @@ export async function payAction(fd: FormData) {
   if (order.stripePaymentIntent) {
     redirect(`/checkout/${order.id}${outcomeQuery(await confirmSessionPaid(order.id, order.stripeId ?? "", order.stripePaymentIntent, origin))}`);
   }
-  if (order.stripeId) await redirectToStoredSession(gateway, order.id, order.stripeId, origin);
+  // a real session is reused; a stale claim is reclaimed below
+  if (order.stripeId && !isClaim(order.stripeId)) await redirectToStoredSession(gateway, order.id, order.stripeId, origin);
 
   const nowSec = Math.floor(Date.now() / 1000);
   const minExpiry = nowSec + STRIPE_MIN_MINUTES * 60;
@@ -99,13 +105,30 @@ export async function payAction(fd: FormData) {
   const [claimed] = await db
     .update(orders)
     .set({ stripeId: claimKey(order.id) })
-    .where(and(eq(orders.id, order.id), isNull(orders.stripeId), eq(orders.status, "pending"), eq(orders.stockReleased, false)))
+    .where(
+      and(
+        eq(orders.id, order.id),
+        eq(orders.status, "pending"),
+        eq(orders.stockReleased, false),
+        // free, or a claim left behind by a crashed/timed-out attempt
+        or(
+          isNull(orders.stripeId),
+          and(
+            like(orders.stripeId, "claim:%"),
+            sql`split_part(${orders.stripeId}, ':', 3)::bigint < ${Date.now() - CLAIM_STALE_MS}`,
+          ),
+        ),
+      ),
+    )
     .returning({ id: orders.id });
 
   if (!claimed) {
     const [rival] = await db.select({ stripeId: orders.stripeId }).from(orders).where(eq(orders.id, order.id)).limit(1);
     // the other click is still talking to Stripe: let it finish instead of racing it
-    if (!rival?.stripeId || rival.stripeId === claimKey(order.id)) redirect(`/checkout/${order.id}?error=busy`);
+    if (!rival?.stripeId) redirect(`/checkout/${order.id}?error=busy`);
+    if (isClaim(rival.stripeId) && Date.now() - claimEpoch(rival.stripeId) < CLAIM_STALE_MS) {
+      redirect(`/checkout/${order.id}?error=busy`);
+    }
     await redirectToStoredSession(gateway, order.id, rival.stripeId, origin);
   }
 
@@ -137,16 +160,23 @@ export async function payAction(fd: FormData) {
     await db
       .update(orders)
       .set({ stripeId: null })
-      .where(and(eq(orders.id, order.id), eq(orders.stripeId, claimKey(order.id))));
+      .where(and(eq(orders.id, order.id), like(orders.stripeId, "claim:%")));
     redirect(`/checkout/${order.id}?error=stripe`);
   }
 
-  await db
-    .update(orders)
-    .set({
-      stripeId: session.id,
-      ...(typeof session.payment_intent === "string" ? { stripePaymentIntent: session.payment_intent } : {}),
-    })
-    .where(and(eq(orders.id, order.id), eq(orders.stripeId, claimKey(order.id))));
+  try {
+    await db
+      .update(orders)
+      .set({
+        stripeId: session.id,
+        ...(typeof session.payment_intent === "string" ? { stripePaymentIntent: session.payment_intent } : {}),
+      })
+      .where(and(eq(orders.id, order.id), like(orders.stripeId, "claim:%")));
+  } catch (e) {
+    // the session exists but the row still holds the claim: clear it so the buyer can retry
+    console.error("stripe session persist failed:", e instanceof Error ? e.message.slice(0, 120) : e);
+    await db.update(orders).set({ stripeId: null }).where(and(eq(orders.id, order.id), like(orders.stripeId, "claim:%")));
+    redirect(`/checkout/${order.id}?error=stripe`);
+  }
   redirect(session.url ?? `/checkout/${order.id}`);
 }

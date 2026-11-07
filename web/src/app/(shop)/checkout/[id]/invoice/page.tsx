@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Wordmark } from "@/components/brand/wordmark";
 import { PrintButton } from "@/components/shop/print-button";
 import { currentUser } from "@/lib/auth";
+import { canAccessOrder } from "@/lib/order-access";
 import { usd } from "@/lib/money";
 import { getOrder } from "@/lib/orders";
 
@@ -17,8 +18,8 @@ export default async function InvoicePage({ params }: PageProps<"/checkout/[id]/
   if (!order) notFound();
 
   const viewer = await currentUser();
-  const owns = viewer && (order.userId === viewer.id || order.email === viewer.email);
-  if (!owns && viewer?.role !== "manager") notFound();
+  const owns = canAccessOrder(viewer, order);
+  if (!owns) notFound();
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-16 sm:px-8 print:max-w-none print:px-0 print:py-0">

@@ -4,6 +4,7 @@ import { payAction } from "@/actions/pay";
 import { cancelMyOrderAction } from "@/actions/order";
 import { getOrder } from "@/lib/orders";
 import { currentUser } from "@/lib/auth";
+import { canAccessOrder } from "@/lib/order-access";
 import { stripeEnabled } from "@/lib/stripe";
 import { usd } from "@/lib/money";
 
@@ -28,8 +29,8 @@ export default async function OrderPage({
   if (!order) notFound();
 
   const viewer = await currentUser();
-  const owns = viewer && (order.userId === viewer.id || order.email === viewer.email);
-  if (!owns && viewer?.role !== "manager") notFound();
+  const owns = canAccessOrder(viewer, order);
+  if (!owns) notFound();
 
   const canPay = stripeEnabled && !order.paid && order.status === "pending" && !order.stockReleased;
 

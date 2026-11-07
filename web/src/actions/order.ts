@@ -9,6 +9,7 @@ import { users } from "@/db/schema";
 import { currentCart } from "@/lib/cart-cookie";
 import { attachCartUser } from "@/lib/cart";
 import { currentUser } from "@/lib/auth";
+import { canAccessOrder } from "@/lib/order-access";
 import { cancelOrder, getOrder, placeOrder } from "@/lib/orders";
 import { clientIp, noteFailure, tooMany } from "@/lib/rate-limit";
 
@@ -63,7 +64,7 @@ export async function cancelMyOrderAction(fd: FormData) {
   const back = id ? `/checkout/${encodeURIComponent(id)}` : "/shop";
   const user = await currentUser();
   const order = id ? await getOrder(id) : null;
-  if (!user || !order || (order.userId !== user.id && order.email !== user.email)) redirect("/shop");
+  if (!user || !order || !canAccessOrder(user, order)) redirect("/shop");
 
   await cancelOrder(order.id, user.email);
   revalidatePath("/", "layout");
