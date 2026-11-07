@@ -6,7 +6,7 @@ import { toggleWishlistAction } from "@/actions/wishlist";
 import { NotePyramid } from "@/components/shop/note-pyramid";
 import { ProductGallery } from "@/components/shop/product-gallery";
 import { deleteReviewAction, submitReviewAction } from "@/actions/reviews";
-import { hasPurchased, listReviews, myReview, reviewStats } from "@/lib/reviews";
+import { listReviews, myReview, purchaseOrderId, reviewStats } from "@/lib/reviews";
 import { getProduct } from "@/lib/products";
 import { currentUser } from "@/lib/auth";
 import { isWished } from "@/lib/wishlist";
@@ -39,7 +39,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
     reviewStats(p.handle),
     listReviews(p.handle),
     viewer ? myReview(p.handle, viewer.id) : null,
-    viewer ? hasPurchased(p.handle, viewer) : Promise.resolve(false),
+    viewer ? purchaseOrderId(p.handle, viewer) : Promise.resolve(null),
   ]);
 
   // each spec links to its matching filter page
@@ -175,8 +175,10 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
                     <div className="flex items-baseline justify-between gap-4">
                       <p className="text-sm text-ink">
                         <span className="text-brass">{"★".repeat(r.rating)}<span className="text-line">{"★".repeat(5 - r.rating)}</span></span>
-                        <span className="ml-2 text-taupe">{r.name ?? r.email.split("@")[0]}</span>
-                        <span className="ml-2 border border-line px-1.5 py-0.5 text-[0.55rem] uppercase tracking-[0.12em] text-taupe">verified purchase</span>
+                        <span className="ml-2 text-taupe">{r.authorName ?? r.name ?? "Verified buyer"}</span>
+                        <span className="ml-2 border border-line px-1.5 py-0.5 text-[0.55rem] uppercase tracking-[0.12em] text-taupe">
+                          verified · #{r.orderId.slice(0, 8)}
+                        </span>
                       </p>
                       <p className="label shrink-0">{r.createdAt.toISOString().slice(0, 10)}</p>
                     </div>
@@ -205,13 +207,19 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
                     {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} ★</option>)}
                   </select>
                 </label>
+                <input
+                  name="authorName"
+                  defaultValue={mine?.authorName ?? viewer?.email.split("@")[0] ?? ""}
+                  placeholder="Display name"
+                  className="w-40 border border-line bg-transparent px-3 py-2 text-sm focus:border-ink focus:outline-none"
+                />
                 <textarea name="body" rows={3} defaultValue={mine?.body ?? ""} placeholder="How does it wear? Anything worth knowing?" className="min-w-56 flex-1 border border-line bg-transparent px-3 py-2 text-sm focus:border-ink focus:outline-none" />
               </div>
               <div className="mt-3 flex items-center gap-3">
                 <button className="border border-ink px-5 py-2 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
                   {mine ? "Update review" : "Post review"}
                 </button>
-                <span className="text-xs text-taupe">One review per account; posting again edits it.</span>
+                <span className="text-xs text-taupe">Attached to your paid order #{bought?.slice(0, 8)}. Posting again edits it.</span>
               </div>
             </form>
             ) : (

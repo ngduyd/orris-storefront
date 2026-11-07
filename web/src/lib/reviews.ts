@@ -11,6 +11,8 @@ export async function listReviews(handle: string, limit = 20) {
       id: reviews.id,
       rating: reviews.rating,
       body: reviews.body,
+      authorName: reviews.authorName,
+      orderId: reviews.orderId,
       createdAt: reviews.createdAt,
       userId: reviews.userId,
       email: users.email,
@@ -37,11 +39,11 @@ export async function myReview(handle: string, userId: string) {
 }
 
 /** One review per account per product: submitting again edits it. */
-export async function saveReview(handle: string, userId: string, rating: number, body: string) {
+export async function saveReview(handle: string, userId: string, rating: number, body: string, authorName: string | null, orderId: string) {
   await db
     .insert(reviews)
-    .values({ id: randomUUID(), handle, userId, rating, body })
-    .onConflictDoUpdate({ target: [reviews.handle, reviews.userId], set: { rating, body } });
+    .values({ id: randomUUID(), handle, userId, rating, body, authorName, orderId })
+    .onConflictDoUpdate({ target: [reviews.handle, reviews.userId], set: { rating, body, authorName } }); // orderId stays from the first post
 }
 
 export async function deleteReview(handle: string, userId: string) {
@@ -59,10 +61,10 @@ export async function statsFor(handles: string[]) {
   return new Map(rows.map((r) => [r.handle, { avg: Number(r.avg), count: r.count }]));
 }
 
-/** Verified purchase: a paid order of this account (by user id or email) contains the handle. */
-export async function hasPurchased(handle: string, user: { id: string; email: string }) {
+/** The paid order this account used to buy the handle (latest one), or null. */
+export async function purchaseOrderId(handle: string, user: { id: string; email: string }) {
   const [row] = await db
-    .select({ handle: orderItems.handle })
+    .select({ orderId: orders.id })
     .from(orderItems)
     .innerJoin(orders, eq(orders.id, orderItems.orderId))
     .where(
@@ -72,6 +74,12 @@ export async function hasPurchased(handle: string, user: { id: string; email: st
         sql`(${orders.userId} = ${user.id} or lower(${orders.email}) = ${user.email.toLowerCase()})`,
       ),
     )
+    .orderBy(desc(orders.createdAt))
     .limit(1);
-  return Boolean(row);
+  return row?.orderId ?? null;
+}
+
+/** Kept for callers that only need the boolean. */
+export async function hasPurchased(handle: string, user: { id: string; email: string }) {
+  return Boolean(await purchaseOrderId(handle, user));
 }

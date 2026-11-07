@@ -103,6 +103,8 @@ export const reviews = pgTable(
     handle: text("handle").notNull(),
     userId: text("user_id").notNull(),
     rating: integer("rating").notNull(), // 1..5
+    authorName: text("author_name"),
+    orderId: text("order_id").notNull(), // the paid order this review is anchored to
     body: text("body").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

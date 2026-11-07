@@ -3,23 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth";
-import { deleteReview, hasPurchased, saveReview } from "@/lib/reviews";
+import { deleteReview, purchaseOrderId, saveReview } from "@/lib/reviews";
 
 export async function submitReviewAction(fd: FormData) {
   const handle = String(fd.get("handle") ?? "");
   const rating = Number(fd.get("rating"));
   const body = String(fd.get("body") ?? "").trim().slice(0, 2000);
+  const authorName = String(fd.get("authorName") ?? "").trim().slice(0, 40) || null;
   const user = await currentUser();
   if (!user) redirect(`/account/login?next=${encodeURIComponent(`/product/${handle}`)}`);
   if (!handle || !Number.isInteger(rating) || rating < 1 || rating > 5) {
     redirect(`/product/${handle}?review=error`);
   }
-  // verified purchase only: reviews must be anchored to a paid order
-  if (!(await hasPurchased(handle, user))) {
-    redirect(`/product/${handle}?review=notpurchased`);
-  }
+  // verified purchase only: every review is anchored to a paid order
+  const orderId = await purchaseOrderId(handle, user);
+  if (!orderId) redirect(`/product/${handle}?review=notpurchased`);
 
-  await saveReview(handle, user.id, rating, body);
+  await saveReview(handle, user.id, rating, body, authorName, orderId);
   revalidatePath(`/product/${handle}`);
   revalidatePath("/shop");
   redirect(`/product/${handle}?review=saved#reviews`);
