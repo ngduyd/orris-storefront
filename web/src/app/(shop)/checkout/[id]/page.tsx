@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { payAction } from "@/actions/pay";
 import { cancelMyOrderAction } from "@/actions/order";
 import { getOrder } from "@/lib/orders";
@@ -29,6 +29,8 @@ export default async function OrderPage({
   if (!order) notFound();
 
   const viewer = await currentUser();
+  // not signed in: send them through login and straight back, instead of a dead 404
+  if (!viewer) redirect(`/account/login?next=${encodeURIComponent(`/checkout/${order.id}`)}`);
   const owns = canAccessOrder(viewer, order);
   if (!owns) notFound();
 

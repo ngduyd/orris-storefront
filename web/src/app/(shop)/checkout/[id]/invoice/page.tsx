@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Wordmark } from "@/components/brand/wordmark";
 import { PrintButton } from "@/components/shop/print-button";
 import { currentUser } from "@/lib/auth";
@@ -18,6 +18,8 @@ export default async function InvoicePage({ params }: PageProps<"/checkout/[id]/
   if (!order) notFound();
 
   const viewer = await currentUser();
+  // not signed in: send them through login and straight back, instead of a dead 404
+  if (!viewer) redirect(`/account/login?next=${encodeURIComponent(`/checkout/${order.id}`)}`);
   const owns = canAccessOrder(viewer, order);
   if (!owns) notFound();
 
