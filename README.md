@@ -109,6 +109,14 @@ never part of `up` (it is named explicitly nowhere) because podman-compose hangs
 container is a `depends_on` target, and it cannot `run` a service that sits behind a profile. The
 deploy job in `release.yml` runs the same script over SSH, so a push to master is all it takes. The catalogue still has to be loaded separately (the image does not ship `data/`).
 
+## Vercel
+
+`web/vercel.json` (root directory `web`) adds a cron that sweeps expired stock reservations, which a
+serverless deployment has no other trigger for. `output: "standalone"` is applied only when
+`BUILD_TARGET=docker`, because Vercel rejects it. Uploads must go to Cloudinary: the local
+`public/uploads` path is read-only there. Rate limits stay per instance, and the durable claims
+(stock, refunds, shipping notices) are still enforced in Postgres.
+
 ## Environment
 
 | Variable | Needed for |

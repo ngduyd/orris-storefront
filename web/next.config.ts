@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // standalone is for the Docker image; Vercel builds its own output and rejects this option
+  output: process.env.BUILD_TARGET === "docker" ? "standalone" : undefined,
   images: {
     remotePatterns: [{ protocol: "https", hostname: "res.cloudinary.com" }],
   },

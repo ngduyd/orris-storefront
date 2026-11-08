@@ -1,6 +1,15 @@
 {
   "mcpServers": {
-    "context7": { "exposure": "direct" },
-    "obsidian": { "enabled": false }
+    "context7": {
+      "exposure": "direct"
+    },
+    "obsidian": {
+      "enabled": false
+    },
+    "vercel": {
+      "url": "https://mcp.vercel.com",
+      "headers": { "Authorization": "Bearer vcp_1Z54DcnR0MwOzNHGqMWnKV5cb3K3QeXIEB2dls2ZuxvGXUqPGT3ZgQ3o" },
+      "exposure": "direct"
+    }
   }
 }
