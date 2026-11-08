@@ -1,14 +1,12 @@
 import type Stripe from "stripe";
 import { confirmSessionPaid } from "@/lib/bill";
+import { originFromHeaders } from "@/lib/origin";
 import { stripe } from "@/lib/stripe";
 import { cancelOrder } from "@/lib/orders";
 
 /** Webhook Stripe (test mode): stripe listen --forward-to localhost:3000/api/stripe/webhook */
 function originOf(req: Request) {
-  const site = process.env.SITE_URL?.trim();
-  if (site) return site.replace(/\/+$/, "");
-  const h = req.headers;
-  return `${h.get("x-forwarded-proto") ?? "http"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
+  return originFromHeaders(req.headers);
 }
 
 export async function POST(req: Request) {

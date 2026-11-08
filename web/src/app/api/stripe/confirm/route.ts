@@ -1,5 +1,6 @@
 import { getOrder } from "@/lib/orders";
 import { confirmSessionPaid } from "@/lib/bill";
+import { originFromHeaders } from "@/lib/origin";
 import { stripe } from "@/lib/stripe";
 
 /**
@@ -9,12 +10,14 @@ import { stripe } from "@/lib/stripe";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const orderId = url.searchParams.get("orderId") ?? "";
-  const back = (q: string) => Response.redirect(`${url.origin}/checkout/${orderId}${q}`, 302);
+  // not url.origin: behind nginx the app sees Host 0.0.0.0:3000 and Stripe's return would bounce there
+  const origin = originFromHeaders(req.headers);
+  const back = (q: string) => Response.redirect(`${origin}/checkout/${orderId}${q}`, 302);
 
-  if (!orderId || !stripe) return Response.redirect(`${url.origin}/shop`, 302);
+  if (!orderId || !stripe) return Response.redirect(`${origin}/shop`, 302);
 
   const order = await getOrder(orderId);
-  if (!order) return Response.redirect(`${url.origin}/shop`, 302);
+  if (!order) return Response.redirect(`${origin}/shop`, 302);
   if (order.paid) return back("");
 
   const sessionId = order.stripeId;
@@ -24,7 +27,7 @@ export async function GET(req: Request) {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     if (session.payment_status === "paid") {
       const paymentIntent = typeof session.payment_intent === "string" ? session.payment_intent : null;
-      const outcome = await confirmSessionPaid(orderId, session.id, paymentIntent, url.origin);
+      const outcome = await confirmSessionPaid(orderId, session.id, paymentIntent, origin);
       if (outcome === "refunded") return back("?refunded=1"); // the hold was gone, money went back
       if (outcome === "failed") return back("?error=refund"); // nothing was kept: say so, never a silent ok
       return back("");
