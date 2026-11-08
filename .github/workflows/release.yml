@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     branches: [master]
+    tags: ["v*"]
 
 jobs:
   build:
@@ -33,6 +34,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/orris-storefront:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/orris-storefront:${{ github.ref_name }}
             ghcr.io/${{ github.repository_owner }}/orris-storefront:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -47,9 +49,41 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/orris-storefront:${{ github.sha }}-migrator
+            ghcr.io/${{ github.repository_owner }}/orris-storefront:${{ github.ref_name }}-migrator
             ghcr.io/${{ github.repository_owner }}/orris-storefront:migrator
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  vercel:
+    # Vercel builds from source itself; this job only pushes the current commit to production
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Pull the Vercel project settings
+        if: env.VERCEL_PROJECT_ID != ''
+        working-directory: web
+        run: npx --yes vercel@latest pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build for Vercel
+        if: env.VERCEL_PROJECT_ID != ''
+        working-directory: web
+        run: npx --yes vercel@latest build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to production
+        if: env.VERCEL_PROJECT_ID != ''
+        working-directory: web
+        run: npx --yes vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
   deploy:
     needs: build

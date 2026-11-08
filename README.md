@@ -146,9 +146,12 @@ including a concurrent double submit, reservations and expiry, refunds restoring
 forward-only shipping, rate-limit windows, single-use tokens, order access rules, webhook
 signature verification, and a guard test asserting every admin action starts with a role check.
 
-CI runs the same sequence on a Postgres service. `release.yml` builds the image and pushes
-`ghcr.io/ngduyd/orris-storefront:{sha,latest}`; the deploy job is skipped until
-`DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER` and `DEPLOY_SSH_KEY` exist as secrets.
+CI runs the same sequence on a Postgres service. A push to `master` (or a `v*` tag) makes
+`release.yml` build and push `ghcr.io/ngduyd/orris-storefront:{sha, ref name, latest}` plus the
+matching `-migrator` tags, deploy the same commit to Vercel, then run `scripts/deploy.sh` over SSH.
+Each job is opt-in through secrets: Vercel needs `VERCEL_TOKEN`, `VERCEL_ORG_ID` and
+`VERCEL_PROJECT_ID`; the SSH deploy needs `DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER`, `DEPLOY_SSH_KEY`.
+Missing secrets skip that job instead of failing the pipeline.
 
 ## Limits, on purpose
 
