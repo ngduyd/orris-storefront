@@ -1,12 +1,12 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type Stripe from "stripe";
 import { and, eq, isNull, like, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { getOrder } from "@/lib/orders";
+import { requestOrigin } from "@/lib/origin";
 import { confirmSessionPaid } from "@/lib/bill";
 import { currentUser } from "@/lib/auth";
 import { canAccessOrder } from "@/lib/order-access";
@@ -65,7 +65,7 @@ export async function payAction(fd: FormData) {
   // the hold is over: nothing to pay for, the stock already went back
   if (order.status !== "pending" || order.stockReleased) redirect(`/checkout/${orderId}`);
 
-  const origin = (await headers()).get("origin") ?? `http://${(await headers()).get("host")}`;
+  const origin = await requestOrigin();
 
   // a paid attempt is confirmed, never re-created
   if (order.stripePaymentIntent) {

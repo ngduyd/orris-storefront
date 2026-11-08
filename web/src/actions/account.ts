@@ -24,8 +24,10 @@ const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 
 async function origin() {
+  const site = process.env.SITE_URL?.trim();
+  if (site) return site.replace(/\/+$/, "");
   const h = await headers();
-  return `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+  return `${h.get("x-forwarded-proto") ?? "http"}://${h.get("x-forwarded-host") ?? h.get("host")}`;
 }
 
 export async function customerLoginAction(fd: FormData) {

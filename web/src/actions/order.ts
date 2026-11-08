@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
@@ -11,6 +10,7 @@ import { currentCart } from "@/lib/cart-cookie";
 import { attachCartUser } from "@/lib/cart";
 import { currentUser } from "@/lib/auth";
 import { canAccessOrder } from "@/lib/order-access";
+import { requestOrigin } from "@/lib/origin";
 import { sendOrderClosed } from "@/lib/bill";
 import { cancelOrder, getOrder, placeOrder } from "@/lib/orders";
 import { clientIp, noteFailure, tooMany } from "@/lib/rate-limit";
@@ -83,8 +83,7 @@ export async function cancelMyOrderAction(fd: FormData) {
 
   const cancelled = await cancelOrder(order.id, user.email);
   if (cancelled) {
-    const h = await headers();
-    await sendOrderClosed(order.id, h.get("origin") ?? `http://${h.get("host")}`, "cancelled");
+    await sendOrderClosed(order.id, await requestOrigin(), "cancelled");
   }
   revalidatePath("/", "layout");
   redirect(`${back}?cancelled=1`);

@@ -2,7 +2,6 @@
 
 import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireManager, requireStaff } from "@/lib/auth";
 import { cancelOrder, refundOrder } from "@/lib/orders";
@@ -22,6 +21,7 @@ import {
 } from "@/lib/admin";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
+import { requestOrigin } from "@/lib/origin";
 import { writeAudit } from "@/lib/audit";
 import { deleteImage } from "@/lib/upload";
 import { orderStatus } from "@/db/schema";
@@ -175,8 +175,7 @@ export async function refundOrderAction(fd: FormData) {
   if (!id) redirect("/admin/orders");
   const ok = await refundOrder(id, actor.email);
   if (ok) {
-    const h = await headers();
-    await sendOrderClosed(id, h.get("origin") ?? `http://${h.get("host")}`, "refunded");
+    await sendOrderClosed(id, await requestOrigin(), "refunded");
   }
   revalidatePath("/admin/orders");
   redirect(`/admin/orders/${encodeURIComponent(id)}?${ok ? "saved=1" : "error=norefund"}`);
@@ -208,8 +207,7 @@ export async function saveShippingAction(fd: FormData) {
       .where(and(eq(orders.id, id), ne(orders.shippingNotifiedStatus, status)))
       .returning({ id: orders.id });
     if (claimed) {
-      const h = await headers();
-      await sendShippingNotice(id, h.get("origin") ?? `http://${h.get("host")}`);
+      await sendShippingNotice(id, await requestOrigin());
     }
   }
   await writeAudit({

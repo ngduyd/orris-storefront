@@ -7,8 +7,11 @@ import { headers } from "next/headers";
 
 /** Origin from the real Host header (tailnet/https), not Next's internal URL. */
 async function requestOrigin(fallback: string) {
+  // SITE_URL wins: behind nginx the Host header can be the internal address
+  const site = process.env.SITE_URL?.trim();
+  if (site) return site.replace(/\/+$/, "");
   const h = await headers();
-  const host = h.get("host") ?? new URL(fallback).host;
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? new URL(fallback).host;
   const proto = (h.get("x-forwarded-proto") ?? "http").split(",")[0].trim();
   return `${proto}://${host}`;
 }
