@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { changePasswordAction, customerLogoutAction, resendVerifyAction } from "@/actions/account";
+import { changePasswordAction, customerLogoutAction, resendVerifyAction, setPasswordAction } from "@/actions/account";
 import { listOrdersFor } from "@/lib/account";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { usd } from "@/lib/money";
 
 export const metadata = { title: "Your account" };
@@ -13,7 +13,11 @@ export const dynamic = "force-dynamic";
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ verify?: string; pw?: string }> }) {
   const user = await requireUser();
   const { verify, pw } = await searchParams;
-  const [me] = await db.select({ verified: users.emailVerifiedAt }).from(users).where(eq(users.id, user.id)).limit(1);
+  const [me] = await db
+    .select({ verified: users.emailVerifiedAt, hasPassword: sql<boolean>`${users.passwordHash} is not null` })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
   const rows = await listOrdersFor(user);
 
   return (
@@ -39,6 +43,11 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </div>
       )}
 
+      {verify === "slow" ? (
+        <p role="alert" className="mt-6 text-sm text-brass">
+          Verification email already sent — check your inbox, or try again in an hour.
+        </p>
+      ) : null}
       {verify === "ok" ? <p className="mt-6 text-sm text-brass">Email verified.</p> : null}
       {verify === "expired" ? <p className="mt-6 text-sm text-brass">That verification link has expired.</p> : null}
 
@@ -46,16 +55,22 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <Link href="/account/wishlist" className="label link-underline text-brass hover:text-ink">Wishlist →</Link>
       </p>
 
-      <form action={changePasswordAction} className="mt-12 max-w-sm space-y-4 border-t border-line pt-8">
-        <p className="label">Change password</p>
-        <input
-          name="currentPassword"
-          type="password"
-          required
-          autoComplete="current-password"
-          placeholder="Current password"
-          className="w-full border border-line bg-transparent px-3 py-2.5 text-sm focus:border-ink focus:outline-none"
-        />
+      <form action={me?.hasPassword ? changePasswordAction : setPasswordAction} className="mt-12 max-w-sm space-y-4 border-t border-line pt-8">
+        <p className="label">{me?.hasPassword ? "Change password" : "Set a password"}</p>
+        {me?.hasPassword ? (
+          <input
+            name="currentPassword"
+            type="password"
+            required
+            autoComplete="current-password"
+            placeholder="Current password"
+            className="w-full border border-line bg-transparent px-3 py-2.5 text-sm focus:border-ink focus:outline-none"
+          />
+        ) : (
+          <p className="text-xs leading-relaxed text-taupe">
+            This account signs in with Google. Set a password to also sign in with your email.
+          </p>
+        )}
         <input
           name="newPassword"
           type="password"
@@ -71,13 +86,13 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <p role="alert" className="text-sm text-brass">Current password is wrong.</p>
         ) : pw === "short" ? (
           <p role="alert" className="text-sm text-brass">New password needs at least 8 characters.</p>
-        ) : pw === "google" ? (
-          <p className="text-sm text-brass">This account signs in with Google, so it has no password.</p>
+        ) : pw === "exists" ? (
+          <p className="text-sm text-brass">This account already has a password — use the change form.</p>
         ) : pw === "slow" ? (
           <p role="alert" className="text-sm text-brass">Too many password changes — try again in an hour.</p>
         ) : null}
         <button className="border border-ink px-5 py-2 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
-          Save password
+          {me?.hasPassword ? "Save password" : "Set password"}
         </button>
       </form>
 

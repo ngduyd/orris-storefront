@@ -55,6 +55,8 @@ export async function GET(req: Request) {
   if (!userId) {
     const [byEmail] = await db.select({ id: users.id }).from(users).where(eq(users.email, profile.email)).limit(1);
     if (byEmail) {
+      // never merge into an existing account on the strength of an unverified address
+      if (!profile.emailVerified) return fail("unverified");
       userId = byEmail.id;
       await db
         .update(users)

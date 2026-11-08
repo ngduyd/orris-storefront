@@ -79,6 +79,25 @@ export async function registerAction(fd: FormData) {
   redirect(next);
 }
 
+/** For accounts created through Google, which have no password to confirm. */
+export async function setPasswordAction(fd: FormData) {
+  const user = await currentUser();
+  if (!user) redirect("/account/login");
+
+  const password = String(fd.get("newPassword") ?? "");
+  if (hit(`pw:${user.id}`, 5, HOUR)) redirect("/account?pw=slow");
+  if (password.length < 8) redirect("/account?pw=short");
+
+  const [row] = await db.select({ hash: users.passwordHash }).from(users).where(eq(users.id, user.id)).limit(1);
+  if (row?.hash) redirect("/account?pw=exists"); // already has one: use the change form
+
+  await db.update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
+  const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
+  await db.delete(sessions).where(and(eq(sessions.userId, user.id), sessionId ? ne(sessions.id, sessionId) : undefined));
+  await writeAudit({ actorId: user.id, actorEmail: user.email, action: "user.password", targetType: "user", targetId: user.id, detail: "password set (oauth account), other sessions signed out" });
+  redirect("/account?pw=ok");
+}
+
 export async function logoutAction() {
   await signOut();
   redirect("/");
@@ -128,6 +147,8 @@ export async function resendVerifyAction() {
   if (!user) redirect("/account/login");
   const [row] = await db.select({ verified: users.emailVerifiedAt }).from(users).where(eq(users.id, user.id)).limit(1);
   if (row?.verified) redirect("/account?verify=ok");
+  // the button is cheap to press and every press sends a real email
+  if (hit(`verify-mail:${user.id}`, 3, HOUR)) redirect("/account?verify=slow");
 
   await pruneTokens();
   const token = await issueToken(user.id, "verify", DAY);
