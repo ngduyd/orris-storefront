@@ -43,6 +43,11 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </div>
       )}
 
+      {verify === "wait" ? (
+        <p role="alert" className="mt-6 text-sm text-brass">
+          A verification email was sent a moment ago — check your inbox. You can request another in five minutes.
+        </p>
+      ) : null}
       {verify === "slow" ? (
         <p role="alert" className="mt-6 text-sm text-brass">
           Verification email already sent — check your inbox, or try again in an hour.

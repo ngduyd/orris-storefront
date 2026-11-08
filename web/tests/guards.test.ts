@@ -49,3 +49,20 @@ describe("upload endpoint", () => {
     expect(src).toMatch(/MAX_BYTES/);
   });
 });
+
+describe("email min interval", () => {
+  it("refuses a second send inside the gap and allows it after", async () => {
+    const { clearSent, markSent, tooSoon } = await import("@/lib/rate-limit");
+    expect(tooSoon("mail:t", 5000)).toBe(false);
+    markSent("mail:t");
+    expect(tooSoon("mail:t", 5000)).toBe(true);
+    clearSent("mail:t");
+    expect(tooSoon("mail:t", 5000)).toBe(false);
+  });
+
+  it("the gap is per subject", async () => {
+    const { markSent, tooSoon } = await import("@/lib/rate-limit");
+    markSent("mail:a");
+    expect(tooSoon("mail:b", 5000)).toBe(false);
+  });
+});

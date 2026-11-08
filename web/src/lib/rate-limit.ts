@@ -43,3 +43,25 @@ export async function clientIp(): Promise<string | null> {
   const hops = h.get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
   return hops.at(-1) ?? null;
 }
+
+/**
+ * Minimum gap between two sends for the same subject, so a double click does not send twice but
+ * a missing email can be requested again in minutes instead of an hour.
+ */
+const lastSent = new Map<string, number>();
+const SENT_TTL = 60 * 60 * 1000;
+
+export function tooSoon(key: string, minMs: number) {
+  const at = lastSent.get(key);
+  return at !== undefined && Date.now() - at < minMs;
+}
+
+export function markSent(key: string) {
+  const now = Date.now();
+  if (lastSent.size > 500) for (const [k, at] of lastSent) if (now - at > SENT_TTL) lastSent.delete(k);
+  lastSent.set(key, now);
+}
+
+export function clearSent(key: string) {
+  lastSent.delete(key);
+}

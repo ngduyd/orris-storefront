@@ -11,7 +11,7 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { SESSION_COOKIE, currentUser, signIn, signOut } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { consumeToken, issueToken, pruneTokens } from "@/lib/tokens";
-import { clearFailures, clientIp, hit, noteFailure, tooMany } from "@/lib/rate-limit";
+import { clearFailures, clientIp, hit, markSent, noteFailure, tooMany, tooSoon } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
 
 const credentials = z.object({
@@ -21,6 +21,7 @@ const credentials = z.object({
 
 const safeNext = (v: unknown) => (typeof v === "string" && v.startsWith("/") && !v.startsWith("//") ? v : "/account");
 const HOUR = 60 * 60 * 1000;
+const FIVE_MIN = 5 * 60 * 1000;
 const DAY = 24 * HOUR;
 
 async function origin() {
@@ -114,8 +115,11 @@ export async function forgotAction(fd: FormData) {
   // two limits: the address that floods us, and the one email address being hammered
   const ip = await clientIp();
   if ((ip !== null && hit(`forgot-ip:${ip}`, 5, HOUR)) || hit(`forgot:${email}`, 3, HOUR)) redirect("/account/forgot?error=slow");
+  // silently skipped: the page must look identical whether the account exists or the mail was just sent
+  if (tooSoon(`forgot-mail:${email}`, FIVE_MIN)) redirect("/account/forgot?sent=1");
 
   const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  markSent(`forgot-mail:${email}`);
   // always report success so account existence never leaks
   if (user) {
     await pruneTokens();
@@ -148,10 +152,12 @@ export async function resendVerifyAction() {
   const [row] = await db.select({ verified: users.emailVerifiedAt }).from(users).where(eq(users.id, user.id)).limit(1);
   if (row?.verified) redirect("/account?verify=ok");
   // the button is cheap to press and every press sends a real email
-  if (hit(`verify-mail:${user.id}`, 3, HOUR)) redirect("/account?verify=slow");
+  if (tooSoon(`verify-mail:${user.id}`, FIVE_MIN)) redirect("/account?verify=wait");
+  if (hit(`verify-mail-h:${user.id}`, 3, HOUR)) redirect("/account?verify=slow");
 
   await pruneTokens();
   const token = await issueToken(user.id, "verify", DAY);
+  markSent(`verify-mail:${user.id}`);
   await sendMail({
     to: user.email,
     subject: "Verify your ORRIS email",
