@@ -111,8 +111,9 @@ deploy job in `release.yml` runs the same script over SSH, so a push to master i
 
 ## Vercel
 
-`web/vercel.json` (root directory `web`) adds a cron that sweeps expired stock reservations, which a
-serverless deployment has no other trigger for. `output: "standalone"` is applied only when
+`web/vercel.json` (root directory `web`) adds a daily cron that sweeps expired stock reservations —
+Hobby allows one run per day. It is only a backstop: `placeOrder` sweeps before every checkout and
+`/admin/orders` sweeps when a manager opens it. `output: "standalone"` is applied only when
 `BUILD_TARGET=docker`, because Vercel rejects it. Uploads must go to Cloudinary: the local
 `public/uploads` path is read-only there. Rate limits stay per instance, and the durable claims
 (stock, refunds, shipping notices) are still enforced in Postgres.
