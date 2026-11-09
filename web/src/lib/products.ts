@@ -50,10 +50,16 @@ function where(f: ListFilters) {
  */
 const CACHE = { revalidate: 3600, tags: ["products"] };
 
-const cachedProduct = unstable_cache(async (handle: string) => {
+/** Outside the Next server (vitest, scripts) the incremental cache does not exist, so skip it. */
+const cache =
+  process.env.VITEST || process.env.NEXT_RUNTIME === undefined
+    ? <A extends unknown[], R>(fn: (...args: A) => Promise<R>) => fn
+    : <A extends unknown[], R>(fn: (...args: A) => Promise<R>, key: string[]) => unstable_cache(fn, key, CACHE);
+
+const cachedProduct = cache(async (handle: string) => {
   const [row] = await db.select().from(products).where(eq(products.handle, handle)).limit(1);
   return row ?? null;
-}, ["product"], CACHE);
+}, ["product"]);
 
 export async function getProduct(handle: string): Promise<Product | null> {
   return cachedProduct(handle);
@@ -61,7 +67,7 @@ export async function getProduct(handle: string): Promise<Product | null> {
 
 export type ProductList = { items: Product[]; total: number; page: number; limit: number; pages: number };
 
-const cachedListProducts = unstable_cache(async (f: ListFilters): Promise<ProductList> => {
+const cachedListProducts = cache(async (f: ListFilters): Promise<ProductList> => {
   const limit = Math.min(f.limit ?? PAGE_SIZE, 60);
   const page = Math.max(f.page ?? 1, 1);
   const [items, [total]] = await Promise.all([
@@ -75,7 +81,7 @@ const cachedListProducts = unstable_cache(async (f: ListFilters): Promise<Produc
     db.select({ n: sql<number>`count(*)::int` }).from(products).where(where(f)),
   ]);
   return { items, total: total.n, page, limit, pages: Math.max(1, Math.ceil(total.n / limit)) };
-}, ["products:list"], CACHE);
+}, ["products:list"]);
 
 export async function listProducts(f: ListFilters = {}): Promise<ProductList> {
   return cachedListProducts(f);
@@ -87,7 +93,7 @@ export type Facets = {
   bySize: { v: number; n: number }[];
 };
 
-const cachedFacets = unstable_cache(async (gender?: string): Promise<Facets> => {
+const cachedFacets = cache(async (gender?: string): Promise<Facets> => {
   const scope = and(eq(products.status, "active"), gender ? eq(products.gender, gender) : undefined);
   const [byGender, byFamily, bySize] = await Promise.all([
     db.select({ v: products.gender, n: sql<number>`count(*)::int` }).from(products).where(scope).groupBy(products.gender),
@@ -95,7 +101,7 @@ const cachedFacets = unstable_cache(async (gender?: string): Promise<Facets> => 
     db.select({ v: products.sizeMl, n: sql<number>`count(*)::int` }).from(products).where(scope).groupBy(products.sizeMl),
   ]);
   return { byGender, byFamily, bySize };
-}, ["products:facets"], CACHE);
+}, ["products:facets"]);
 
 export async function getFacets(gender?: string): Promise<Facets> {
   return cachedFacets(gender);
@@ -103,7 +109,7 @@ export async function getFacets(gender?: string): Promise<Facets> {
 
 export type BrandCount = { brand: string; n: number };
 
-const cachedBrands = unstable_cache(async (limit: number): Promise<BrandCount[]> => {
+const cachedBrands = cache(async (limit: number): Promise<BrandCount[]> => {
   return db
     .select({ brand: products.brand, n: sql<number>`count(*)::int` })
     .from(products)
@@ -111,17 +117,16 @@ const cachedBrands = unstable_cache(async (limit: number): Promise<BrandCount[]>
     .groupBy(products.brand)
     .orderBy(sql`count(*) desc`)
     .limit(limit);
-}, ["products:brands"], CACHE);
+}, ["products:brands"]);
 
 export async function getBrands(limit = 60): Promise<BrandCount[]> {
   return cachedBrands(limit);
 }
 
-const cachedHandles = unstable_cache(
+const cachedHandles = cache(
   async (): Promise<{ handle: string }[]> =>
     db.select({ handle: products.handle }).from(products).where(eq(products.status, "active")),
   ["products:handles"],
-  CACHE,
 );
 
 export async function getHandles(): Promise<{ handle: string }[]> {
