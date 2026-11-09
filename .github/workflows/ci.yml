@@ -3,7 +3,9 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [dev]
+  # release.yml calls this workflow, so master runs the same checks before anything ships
+  workflow_call:
 
 jobs:
   test:

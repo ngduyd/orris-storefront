@@ -6,7 +6,12 @@ on:
     tags: ["v*"]
 
 jobs:
+  checks:
+    # same tests/lint/typecheck as CI; master never reaches a build or a deployment unless this passes
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: checks
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -55,10 +60,10 @@ jobs:
           cache-to: type=gha,mode=max
 
   vercel:
-    # production only ships from a release tag, so pushing work-in-progress to master never touches
-    # the live site; Vercel builds from source itself, this job just promotes the tagged commit
+    # a master merge only runs checks and publishes images; production moves on a v* tag, after the
+    # checks above are green. Vercel builds from source itself, this job promotes the tagged commit.
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [checks, build]
     runs-on: ubuntu-latest
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -86,25 +91,3 @@ jobs:
         if: env.VERCEL_PROJECT_ID != ''
         working-directory: web
         run: npx --yes vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-  deploy:
-    # production ships from a release tag only, same as Vercel
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    # secrets are not allowed in a job-level `if`; expose them as env and test that instead
-    env:
-      SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
-      SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
-      SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Deploy to production
-        if: env.SSH_HOST != ''
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST \
-            "cd ~/app && ./scripts/deploy.sh"
