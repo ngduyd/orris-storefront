@@ -55,7 +55,9 @@ jobs:
           cache-to: type=gha,mode=max
 
   vercel:
-    # Vercel builds from source itself; this job only pushes the current commit to production
+    # production only ships from a release tag, so pushing work-in-progress to master never touches
+    # the live site; Vercel builds from source itself, this job just promotes the tagged commit
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     env:

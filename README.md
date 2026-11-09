@@ -148,7 +148,8 @@ signature verification, and a guard test asserting every admin action starts wit
 
 CI runs the same sequence on a Postgres service. A push to `master` (or a `v*` tag) makes
 `release.yml` build and push `ghcr.io/ngduyd/orris-storefront:{sha, ref name, latest}` plus the
-matching `-migrator` tags, deploy the same commit to Vercel, then run `scripts/deploy.sh` over SSH.
+matching `-migrator` tags and run `scripts/deploy.sh` over SSH. A `v*` tag additionally deploys that
+commit to Vercel, so a plain master push never touches the live site.
 Each job is opt-in through secrets: Vercel needs `VERCEL_TOKEN`, `VERCEL_ORG_ID` and
 `VERCEL_PROJECT_ID`; the SSH deploy needs `DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER`, `DEPLOY_SSH_KEY`.
 Missing secrets skip that job instead of failing the pipeline.
