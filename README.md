@@ -153,9 +153,10 @@ nothing.
 
 CI runs the same sequence on a Postgres service. A push to `master` (or a `v*` tag) makes
 `release.yml` build and push `ghcr.io/ngduyd/orris-storefront:{sha, ref name, latest}` plus the
-matching `-migrator` tags, then deploy the commit to Vercel.
-The Vercel job is opt-in through `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`; missing
-secrets skip the job instead of failing the pipeline.
+matching `-migrator` tags. Vercel itself builds and deploys the same push through its Git
+integration (`web/vercel.json` enables that for `master` only), so the workflow needs no Vercel token.
+Vercel deploys come from its own Git integration rather than from Actions, so no Vercel secrets are
+needed; `master` is protected so a merge cannot happen while the checks are red.
 
 ## Limits, on purpose
 

@@ -2,7 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "git": {
-    "deploymentEnabled": false
+    "deploymentEnabled": {
+      "master": true,
+      "dev": false
+    }
   },
   "crons": [
     {
