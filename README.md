@@ -146,14 +146,14 @@ including a concurrent double submit, reservations and expiry, refunds restoring
 forward-only shipping, rate-limit windows, single-use tokens, order access rules, webhook
 signature verification, and a guard test asserting every admin action starts with a role check.
 
-Branches: `dev` is the working branch — CI runs there and nothing is ever deployed from it. `master`
-only receives merges: a push runs the same checks and publishes the images. Production moves only
-when a `v*` tag is pushed, so nothing reaches Vercel without green checks first.
+Branches: work on `dev` — CI runs there and nothing is deployed from it. When it is green, merge to
+`master`; that push re-runs the same checks, publishes the images and deploys to Vercel, so nothing
+reaches production unless the checks pass. A `v*` tag is only a marker for a release and deploys
+nothing.
 
 CI runs the same sequence on a Postgres service. A push to `master` (or a `v*` tag) makes
 `release.yml` build and push `ghcr.io/ngduyd/orris-storefront:{sha, ref name, latest}` plus the
-matching `-migrator` tags. A `v*` tag then deploys that commit to Vercel, so a plain master push only
-publishes images and never touches the live site.
+matching `-migrator` tags, then deploy the commit to Vercel.
 The Vercel job is opt-in through `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID`; missing
 secrets skip the job instead of failing the pipeline.
 
