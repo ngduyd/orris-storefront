@@ -7,7 +7,16 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/account", "/checkout", "/api"],
+      disallow: [
+        "/admin",
+        "/account",
+        "/checkout",
+        "/cart",
+        "/api",
+        // filtered collections are infinite permutations of the same catalogue; the sitemap lists
+        // the canonical pages, and crawling /shop?page=N.. only burns database time
+        "/*?*",
+      ],
     },
     sitemap: `${base}/sitemap.xml`,
   };

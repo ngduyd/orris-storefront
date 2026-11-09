@@ -1,7 +1,7 @@
 "use server";
 
 import { and, eq, ne } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireManager, requireStaff } from "@/lib/auth";
 import { cancelOrder, refundOrder } from "@/lib/orders";
@@ -108,6 +108,7 @@ export async function saveProductAction(fd: FormData) {
   revalidatePath("/admin/products");
   revalidatePath(`/product/${handle}`);
   revalidatePath("/shop");
+  updateTag("products"); // server action: expire the cached catalogue immediately
   redirect(`${back}?saved=1`);
 }
 
@@ -143,6 +144,7 @@ export async function endSaleAction(fd: FormData) {
   revalidatePath("/admin/products");
   revalidatePath(`/product/${handle}`);
   revalidatePath("/shop");
+  updateTag("products"); // server action: expire the cached catalogue immediately
   redirect(`/admin/products/${encodeURIComponent(handle)}?saved=1`);
 }
 
