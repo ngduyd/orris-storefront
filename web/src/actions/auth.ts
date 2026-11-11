@@ -14,6 +14,7 @@ export async function loginAction(fd: FormData) {
   if (tooMany(key)) redirect("/admin/login?error=slow");
 
   const user = await signIn(email, password);
+  if (user === "disabled") redirect("/admin/login?error=disabled");
 
   // a customer signing in here would loop back, so reject immediately
   if (!user || (user.role !== "manager" && user.role !== "carrier")) {
