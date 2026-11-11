@@ -8,14 +8,16 @@ import { toggleWishlistAction } from "@/actions/wishlist";
 export function ProductCard({ p, priority = false, wished = false, back = "/shop", reviews }: { p: Product; priority?: boolean; wished?: boolean; back?: string; reviews?: { avg: number | null; count: number } }) {
   return (
     <div className="group relative">
+      {/* the image link needs its own name, and it must contain the badge text it shows */}
       <Link href={`/product/${p.handle}`} className="block">
+        <span className="sr-only">{p.title}</span>
         <div className="relative aspect-4/5 overflow-hidden bg-ivory-deep">
           {p.stock <= 0 ? (
             <span className="absolute top-2 left-2 z-10 bg-ink px-2 py-1 text-[0.6rem] uppercase tracking-[0.14em] text-ivory">
               Sold out
             </span>
           ) : onSale(p) ? (
-            <span className="absolute top-2 left-2 z-10 bg-brass px-2 py-1 text-[0.6rem] uppercase tracking-[0.14em] text-ivory">
+            <span className="absolute top-2 left-2 z-10 bg-brass px-2 py-1 text-[0.6rem] uppercase tracking-[0.14em] text-ink">
               −{discountPercent(p)}%
             </span>
           ) : null}
@@ -34,7 +36,7 @@ export function ProductCard({ p, priority = false, wished = false, back = "/shop
         <input type="hidden" name="back" value={back} />
         <button
           aria-label={wished ? `Remove ${p.title} from wishlist` : `Save ${p.title} to wishlist`}
-          className={`grid size-9 place-items-center bg-ivory/85 text-base leading-none backdrop-blur transition-colors duration-300 ease-[var(--ease-out-soft)] hover:bg-ivory ${wished ? "text-brass" : "text-taupe hover:text-ink"}`}
+          className={`grid size-9 place-items-center bg-ivory/85 text-base leading-none backdrop-blur transition-colors duration-300 ease-[var(--ease-out-soft)] hover:bg-ivory ${wished ? "text-brass-text" : "text-taupe hover:text-ink"}`}
         >
           {wished ? "♥" : "♡"}
         </button>
@@ -47,13 +49,13 @@ export function ProductCard({ p, priority = false, wished = false, back = "/shop
           <Link href={`/product/${p.handle}`} className="link-underline inline-flex min-h-6 items-center">{p.title}</Link>
         </h2>
         <p className="mt-1 flex items-baseline gap-2 text-sm text-ink-soft" title={sarNote(p.priceMinor)}>
-          <span className={onSale(p) ? "text-brass" : undefined}>{usd(p.priceMinor)}</span>
+          <span className={onSale(p) ? "text-brass-text" : undefined}>{usd(p.priceMinor)}</span>
           {onSale(p) ? <span className="text-xs text-taupe line-through">{usd(p.compareAtMinor!)}</span> : null}
           <span className="text-taupe">· {p.sizeMl}ml</span>
         </p>
         {reviews?.count ? (
           <p className="mt-0.5 text-xs text-taupe">
-            <span className="text-brass">{"★".repeat(Math.round(reviews.avg ?? 0))}</span>{" "}
+            <span className="text-brass-text">{"★".repeat(Math.round(reviews.avg ?? 0))}</span>{" "}
             {reviews.avg?.toFixed(1)} · {reviews.count} review{reviews.count === 1 ? "" : "s"}
           </p>
         ) : p.rating !== null && p.ratingCount ? (

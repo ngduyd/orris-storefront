@@ -22,11 +22,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <input name="password" type="password" required autoComplete="current-password" className="mt-2 w-full border border-line bg-transparent px-3 py-2.5 text-sm focus:border-ink focus:outline-none" />
         </label>
         {error === "disabled" ? (
-          <p className="text-sm text-brass">This account is blocked. Ask another manager to restore it.</p>
+          <p className="text-sm text-brass-text">This account is blocked. Ask another manager to restore it.</p>
         ) : error === "slow" ? (
-          <p className="text-sm text-brass">Too many attempts. Wait 15 minutes.</p>
+          <p className="text-sm text-brass-text">Too many attempts. Wait 15 minutes.</p>
         ) : error ? (
-          <p className="text-sm text-brass">Wrong email or password.</p>
+          <p className="text-sm text-brass-text">Wrong email or password.</p>
         ) : null}
         <button className="w-full border border-ink px-6 py-3 text-[0.7rem] uppercase tracking-[0.18em] transition-colors duration-300 ease-[var(--ease-out-soft)] hover:bg-ink hover:text-ivory">
           Sign in

@@ -52,7 +52,7 @@ export default async function Home() {
               <Link href="/shop" className="border border-ink px-7 py-3 text-[0.7rem] uppercase tracking-[0.18em] transition-colors duration-300 ease-[var(--ease-out-soft)] hover:bg-ink hover:text-ivory">
                 Shop the collection
               </Link>
-              <Link href="/shop?sort=rating" className="label link-underline border-b border-brass pb-1 text-brass">
+              <Link href="/shop?sort=rating" className="label link-underline border-b border-brass pb-1 text-brass-text">
                 Most rated
               </Link>
             </div>
@@ -193,7 +193,7 @@ export default async function Home() {
         <h2 className="mx-auto mt-4 max-w-2xl font-serif text-4xl leading-tight font-light">
           Browse openly. Order as a guest. Nothing is charged in this build.
         </h2>
-        <Link href="/shop" className="label mt-8 inline-block border-b border-brass pb-1 text-brass">
+        <Link href="/shop" className="label mt-8 inline-block border-b border-brass pb-1 text-brass-text">
           Enter the collection
         </Link>
       </section>

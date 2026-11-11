@@ -85,7 +85,7 @@ export function ImageManager({ handle, initial }: { handle: string; initial: Gal
         </label>
       </div>
 
-      {error ? <p className="mt-2 text-xs text-brass">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-brass-text">{error}</p> : null}
       <p className="mt-2 text-xs text-taupe">
         Upload several at once; the first image is the primary. Use ↑ to promote, × to remove.
       </p>

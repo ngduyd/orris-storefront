@@ -15,7 +15,7 @@ export default async function CartPage() {
       <div className="mx-auto max-w-3xl px-5 py-28 text-center sm:px-8">
         <p className="label">Bag</p>
         <h1 className="mt-3 font-serif text-4xl font-light">Your bag is empty.</h1>
-        <Link href="/shop" className="label mt-8 inline-block border-b border-brass pb-1 text-brass">
+        <Link href="/shop" className="label mt-8 inline-block border-b border-brass pb-1 text-brass-text">
           Browse the collection
         </Link>
       </div>
@@ -44,9 +44,9 @@ export default async function CartPage() {
               <div className="mt-3 flex items-center gap-4 sm:mt-0">
                 <form action={setQtyAction} className="flex items-center border border-line">
                   <input type="hidden" name="handle" value={l.handle} />
-                  <button name="qty" value={l.qty - 1} className="px-3 py-1 text-sm hover:text-brass" aria-label="Decrease quantity">−</button>
+                  <button name="qty" value={l.qty - 1} className="px-3 py-1 text-sm hover:text-brass-text" aria-label="Decrease quantity">−</button>
                   <span className="min-w-6 text-center text-sm">{l.qty}</span>
-                  <button name="qty" value={l.qty + 1} className="px-3 py-1 text-sm hover:text-brass" aria-label="Increase quantity">+</button>
+                  <button name="qty" value={l.qty + 1} className="px-3 py-1 text-sm hover:text-brass-text" aria-label="Increase quantity">+</button>
                 </form>
                 <form action={removeAction}>
                   <input type="hidden" name="handle" value={l.handle} />

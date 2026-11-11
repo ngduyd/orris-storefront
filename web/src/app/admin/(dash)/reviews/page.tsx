@@ -20,8 +20,8 @@ export default async function AdminReviews({ searchParams }: { searchParams: Pro
         <p className="label">newest {items.length}</p>
       </div>
 
-      {sp.saved ? <p className="mt-4 text-sm text-brass">Saved.</p> : null}
-      {sp.error ? <p className="mt-4 text-sm text-brass">That review no longer exists.</p> : null}
+      {sp.saved ? <p className="mt-4 text-sm text-brass-text">Saved.</p> : null}
+      {sp.error ? <p className="mt-4 text-sm text-brass-text">That review no longer exists.</p> : null}
 
       <table className="mt-8 w-full border-collapse text-sm">
         <thead>
@@ -47,13 +47,13 @@ export default async function AdminReviews({ searchParams }: { searchParams: Pro
                 {r.authorName ?? "—"}
                 <span className="ml-2 text-xs text-taupe">{r.email}</span>
               </td>
-              <td className="py-3 pr-6 whitespace-nowrap text-brass">{"★".repeat(r.rating)}</td>
+              <td className="py-3 pr-6 whitespace-nowrap text-brass-text">{"★".repeat(r.rating)}</td>
               <td className="py-3 pr-6 text-ink-soft">{r.body ? excerpt(r.body) : <span className="text-taupe">no text</span>}</td>
               <td className="py-3">
                 <form action={toggleReviewHiddenAction}>
                   <input type="hidden" name="id" value={r.id} />
                   <input type="hidden" name="hide" value={r.hidden ? "0" : "1"} />
-                  <button className="label min-h-6 text-brass hover:text-ink">{r.hidden ? "Unhide" : "Hide"}</button>
+                  <button className="label min-h-6 text-brass-text hover:text-ink">{r.hidden ? "Unhide" : "Hide"}</button>
                 </form>
               </td>
             </tr>

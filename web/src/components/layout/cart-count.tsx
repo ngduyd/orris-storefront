@@ -11,5 +11,5 @@ export function CartCount() {
   usePathname(); // a new snapshot is read on every navigation
   const n = useSyncExternalStore(subscribe, read, () => 0);
   if (!n) return null;
-  return <span className="ml-1.5 text-brass">{n}</span>;
+  return <span className="ml-1.5 text-brass-text">{n}</span>;
 }

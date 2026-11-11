@@ -54,7 +54,7 @@ export async function FilterBar({ sp }: { sp: SearchParams }) {
       </Group>
       {active.length ? (
         <div className="pt-4">
-          <Link href="/shop" className="label link-underline text-brass">Clear all</Link>
+          <Link href="/shop" className="label link-underline text-brass-text">Clear all</Link>
         </div>
       ) : null}
     </>
@@ -80,7 +80,7 @@ export async function FilterBar({ sp }: { sp: SearchParams }) {
         Search
       </button>
       {f.q ? (
-        <Link href={shopHref(f, { q: undefined, page: 1 })} className="label link-underline text-brass">Clear</Link>
+        <Link href={shopHref(f, { q: undefined, page: 1 })} className="label link-underline text-brass-text">Clear</Link>
       ) : null}
     </form>
   );

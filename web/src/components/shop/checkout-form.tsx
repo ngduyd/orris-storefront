@@ -32,7 +32,7 @@ export function CheckoutForm({ email }: { email: string }) {
       </div>
 
       {state.error ? (
-        <p role="alert" className="text-sm text-brass">{state.error}</p>
+        <p role="alert" className="text-sm text-brass-text">{state.error}</p>
       ) : null}
 
       <button

@@ -18,7 +18,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
     <div className="mx-auto max-w-5xl px-5 py-12 sm:px-8">
       <h1 className="font-serif text-4xl font-light">Checkout</h1>
       {error === "slow" ? (
-        <p role="alert" className="mt-6 border border-line bg-ivory-deep px-4 py-3 text-sm text-brass">
+        <p role="alert" className="mt-6 border border-line bg-ivory-deep px-4 py-3 text-sm text-brass-text">
           Too many checkout attempts from this network. Try again in an hour.
         </p>
       ) : null}

@@ -106,11 +106,11 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
           <h1 className="mt-3 font-serif text-4xl leading-tight font-light sm:text-5xl">{p.title}</h1>
 
           <div className="mt-5 flex flex-wrap items-baseline gap-4">
-            <span className={`text-lg ${onSale(p) ? "text-brass" : ""}`} title={sarNote(p.priceMinor)}>{usd(p.priceMinor)}</span>
+            <span className={`text-lg ${onSale(p) ? "text-brass-text" : ""}`} title={sarNote(p.priceMinor)}>{usd(p.priceMinor)}</span>
             {onSale(p) ? (
               <>
                 <span className="text-sm text-taupe line-through">{usd(p.compareAtMinor!)}</span>
-                <span className="bg-brass px-2 py-1 text-[0.6rem] uppercase tracking-[0.14em] text-ivory">−{discountPercent(p)}%</span>
+                <span className="bg-brass px-2 py-1 text-[0.6rem] uppercase tracking-[0.14em] text-ink">−{discountPercent(p)}%</span>
               </>
             ) : null}
             <span className="text-sm text-taupe">
@@ -145,7 +145,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
           <form action={toggleWishlistAction} className="mt-3">
             <input type="hidden" name="handle" value={p.handle} />
             <input type="hidden" name="back" value={`/product/${p.handle}`} />
-            <button className={`w-full border px-6 py-2.5 text-[0.7rem] uppercase tracking-[0.18em] transition-colors duration-300 ease-[var(--ease-out-soft)] ${wished ? "border-brass text-brass" : "border-line text-ink-soft hover:border-ink"}`}>
+            <button className={`w-full border px-6 py-2.5 text-[0.7rem] uppercase tracking-[0.18em] transition-colors duration-300 ease-[var(--ease-out-soft)] ${wished ? "border-brass text-brass-text" : "border-line text-ink-soft hover:border-ink"}`}>
               {wished ? "♥ Saved to wishlist" : "♡ Save to wishlist"}
             </button>
           </form>
@@ -194,7 +194,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
                   <li key={r.id} className="py-4">
                     <div className="flex items-baseline justify-between gap-4">
                       <p className="text-sm text-ink">
-                        <span className="text-brass">{"★".repeat(r.rating)}<span className="text-line">{"★".repeat(5 - r.rating)}</span></span>
+                        <span className="text-brass-text">{"★".repeat(r.rating)}<span className="text-line">{"★".repeat(5 - r.rating)}</span></span>
                         <span className="ml-2 text-taupe">{r.authorName ?? r.name ?? "Verified buyer"}</span>
                         <span className="ml-2 border border-line px-1.5 py-0.5 text-[0.55rem] uppercase tracking-[0.12em] text-taupe">
                           verified · #{r.orderId.slice(0, 8)}
@@ -252,7 +252,7 @@ export default async function ProductPage({ params }: PageProps<"/product/[handl
                   <>Reviews are open to verified buyers only. Order this bottle and the form appears here.</>
                 ) : (
                   <>
-                    <Link href={`/account/login?next=${encodeURIComponent(`/product/${p.handle}`)}`} className="link-underline text-brass">Sign in</Link>{" "}
+                    <Link href={`/account/login?next=${encodeURIComponent(`/product/${p.handle}`)}`} className="link-underline text-brass-text">Sign in</Link>{" "}
                     to review this bottle — reviews are open to verified buyers only.
                   </>
                 )}
