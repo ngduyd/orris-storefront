@@ -17,8 +17,8 @@ export default async function AdminBrands({ searchParams }: { searchParams: Prom
         <p className="label">{all.length} houses · {all.reduce((s, b) => s + b.products, 0).toLocaleString("en-US")} products</p>
       </div>
 
-      {sp.saved ? <p className="mt-4 text-sm text-brass">Renamed.</p> : null}
-      {sp.error ? <p className="mt-4 text-sm text-brass">Both the current and the new name are required.</p> : null}
+      {sp.saved ? <p className="mt-4 text-sm text-brass-text">Renamed.</p> : null}
+      {sp.error ? <p className="mt-4 text-sm text-brass-text">Both the current and the new name are required.</p> : null}
 
       <form className="mt-6 flex flex-wrap gap-2" action="/admin/brands">
         <input name="q" defaultValue={sp.q} placeholder="Search house" className="min-w-56 flex-1 border border-line bg-transparent px-3 py-2 text-sm focus:border-ink focus:outline-none" />
@@ -46,7 +46,7 @@ export default async function AdminBrands({ searchParams }: { searchParams: Prom
                 <form action={renameBrandAction} className="flex items-center gap-3">
                   <input type="hidden" name="from" value={b.brand} />
                   <input name="to" defaultValue={b.brand} className="w-56 border border-line bg-transparent px-2 py-1.5 text-xs focus:border-ink focus:outline-none" />
-                  <button className="label min-h-6 text-brass hover:text-ink">Save</button>
+                  <button className="label min-h-6 text-brass-text hover:text-ink">Save</button>
                 </form>
               </td>
             </tr>

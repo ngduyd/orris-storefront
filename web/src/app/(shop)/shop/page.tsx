@@ -46,7 +46,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
           {total > 0 ? (
             <>
               <p>This page is past the end of the collection.</p>
-              <a href={shopHref(f, { page: 1 })} className="label mt-4 inline-block border-b border-brass pb-1 text-brass">
+              <a href={shopHref(f, { page: 1 })} className="label mt-4 inline-block border-b border-brass pb-1 text-brass-text">
                 Back to page 1
               </a>
             </>

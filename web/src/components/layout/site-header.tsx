@@ -29,7 +29,7 @@ export async function SiteHeader() {
         </nav>
         <div className="flex items-center gap-6">
           {staff ? (
-            <Link href={staff.role === "carrier" ? "/admin/orders" : "/admin"} className="label link-underline inline-flex min-h-6 items-center text-brass hover:text-ink">
+            <Link href={staff.role === "carrier" ? "/admin/orders" : "/admin"} className="label link-underline inline-flex min-h-6 items-center text-brass-text hover:text-ink">
               Admin
             </Link>
           ) : null}

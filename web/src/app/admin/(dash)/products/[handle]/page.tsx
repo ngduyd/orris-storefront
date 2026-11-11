@@ -51,13 +51,13 @@ export default async function AdminProductEdit({
         </div>
       </div>
 
-      {saved ? <p className="mt-6 text-sm text-brass">Saved.</p> : null}
+      {saved ? <p className="mt-6 text-sm text-brass-text">Saved.</p> : null}
       {error === "brand" ? (
-        <p className="mt-6 text-sm text-brass">
+        <p className="mt-6 text-sm text-brass-text">
           This brand is not in the catalog yet. Tick “create new brand” if you really mean it.
         </p>
       ) : error ? (
-        <p className="mt-6 text-sm text-brass">Check the fields: price/stock/size non-negative, title/brand/image required, compare-at only counts when above price.</p>
+        <p className="mt-6 text-sm text-brass-text">Check the fields: price/stock/size non-negative, title/brand/image required, compare-at only counts when above price.</p>
       ) : null}
 
       <form action={saveProductAction} className="mt-8 grid gap-5 border-t border-line pt-6 sm:grid-cols-2">

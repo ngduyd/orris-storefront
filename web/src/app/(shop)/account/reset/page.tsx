@@ -23,13 +23,13 @@ export default async function ResetPage({ searchParams }: { searchParams: Promis
             <span className="label">Password (8+ characters)</span>
             <input name="password" type="password" required minLength={8} autoComplete="new-password" className="mt-2 w-full border border-line bg-transparent px-3 py-2.5 text-sm focus:border-ink focus:outline-none" />
           </label>
-          {error ? <p className="text-sm text-brass">{MESSAGES[error] ?? "Check your password."}</p> : null}
+          {error ? <p className="text-sm text-brass-text">{MESSAGES[error] ?? "Check your password."}</p> : null}
           <button className="w-full border border-ink px-6 py-3 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
             Save password
           </button>
         </form>
       ) : (
-        <p className="mt-6 text-sm text-brass">{MESSAGES[error ?? "expired"]}</p>
+        <p className="mt-6 text-sm text-brass-text">{MESSAGES[error ?? "expired"]}</p>
       )}
 
       <p className="mt-6 text-sm text-taupe">

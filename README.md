@@ -6,6 +6,13 @@ console, Stripe payments, transactional email, and a container image built by CI
 Everything in the UI, code and docs is English. The data is a real Saudi/Gulf fragrance
 catalogue, priced in SAR and displayed in USD.
 
+![The shop](docs/screenshots/shop.png)
+
+| | |
+|---|---|
+| ![Product page](docs/screenshots/product.png) | ![Mobile](docs/screenshots/home-mobile.png) |
+| ![Admin overview](docs/screenshots/admin.png) | ![Admin orders](docs/screenshots/admin-orders.png) |
+
 ## What it does
 
 **Shop**
@@ -19,7 +26,10 @@ catalogue, priced in SAR and displayed in USD.
 
 - Email + password (scrypt, own `sessions` table — no auth library), Google OAuth
 - Email verification, password reset, password change, rate limits on every credential path
-- Order history; an order is visible only to its owner, a manager, or a *verified* matching email
+- Order history at `/account/orders` (10 per page) with one page per order; an order is visible only
+  to its owner, a manager, or a *verified* matching email
+- An account can be blocked from `/admin/users`: the sessions are deleted, so the next request is
+  signed out, and the sign-in page says why instead of pretending the password was wrong
 
 **Admin** (`/admin`, three roles: `customer`, `manager`, `carrier`)
 
@@ -68,6 +78,7 @@ cd web && npm ci
 cp ../.env.example .env.local           # fill in what you need, see below
 npm run db:push && npm run db:seed      # schema, then the catalogue from ../data/processed
 npm run db:admin                        # manager account from ADMIN_EMAIL / ADMIN_PASSWORD
+npm run seed:demo                       # optional: six believable orders so /admin is not empty
 npx next dev -p 3000
 ```
 
@@ -135,14 +146,17 @@ Hobby allows one run per day. It is only a backstop: `placeOrder` sweeps before 
 | `SITE_URL` | absolute URLs in `sitemap.xml` and `robots.txt` |
 | `REQUIRE_VERIFIED_EMAIL` | refuse checkout until the address is confirmed (default off) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | only read by `npm run db:admin` |
+| `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | optional error reporting; with no DSN nothing is initialised |
+| `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | optional source-map upload; without a token the build is unchanged |
 
 ## Tests and CI
 
 ```bash
 cd web
-npm test          # 78 tests against a real Postgres, no mocks
+npm test          # 97 tests against a real Postgres, no mocks
 npm run typecheck # next typegen + tsc
-npm run build
+npm run build     # production build
+npm run a11y -- http://127.0.0.1:3000   # axe-core: 15 page views, fails on serious/critical
 ```
 
 Coverage: cart arithmetic, filters and search escaping, money/sale maths, order placement
@@ -164,6 +178,35 @@ matching `-migrator` tags. Vercel itself builds and deploys the same push throug
 integration (`web/vercel.json` enables that for `master` only), so the workflow needs no Vercel token.
 Vercel deploys come from its own Git integration rather than from Actions, so no Vercel secrets are
 needed; `master` is protected so a merge cannot happen while the checks are red.
+
+## Hard parts
+
+**Two buyers, one bottle.** A reservation is a single conditional statement per line —
+`UPDATE products SET stock = stock - qty WHERE handle = $1 AND stock >= qty RETURNING price_minor` —
+and lines are taken in `handle` order so two carts cannot deadlock each other. The loser of a race
+gets zero rows back and its whole transaction rolls back. `tests/concurrency.test.ts` fires 20 buyers
+at 5 units of one bottle: exactly 5 orders exist afterwards and stock lands on 0.
+
+**A cache miss that cost money.** `/shop` ran two uncached queries per request, which burned a
+database free tier in days. Product reads are now wrapped in `unstable_cache` with a `products` tag
+that every admin write invalidates, so a cold page went from 4.7s to 0.05s and a warm one stops
+touching Postgres. The hold sweeper only runs when a shortfall is detected, under an advisory lock.
+
+**Schema before code.** A PR added three columns and shipped; the build passed, then every
+`/checkout/*` request returned 500 because production never had the columns. Nothing in the pipeline
+noticed. `release.yml` now runs a `schema` job (`drizzle-kit push --force` against the production
+URL) and the image build depends on it, so code that needs a column cannot ship before it exists.
+
+**Blocking an account.** A session is a row, so blocking is one column plus `DELETE FROM sessions`:
+the next request fails the join. There were four ways back in and all four had to be closed — the
+password path, the Google callback, the per-request user lookup, and the staff lookup.
+
+## Accessibility
+
+a11y is a command, not an intention: `npm run a11y -- <url>` runs axe-core over 15 page views
+(storefront at 1280px and 390px, admin signed in) and exits non-zero on any serious or critical
+violation. It started at 15 failing views and ends at 0, by giving brass a darker text-only token,
+darkening taupe, putting ink on brass badges, and naming the image links on product cards.
 
 ## Limits, on purpose
 

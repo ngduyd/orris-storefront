@@ -6,8 +6,10 @@
   --color-ivory-deep: #efe9e1;
   --color-ink: #12100e;
   --color-ink-soft: #3a352f;
-  --color-taupe: #8a7a66;
+  --color-taupe: #6f6252;
   --color-brass: #b08d57;
+  /* brass is the accent: fine for hairlines and dots, too light for text on ivory */
+  --color-brass-text: #8a6835;
   --color-line: #ddd5c9;
 
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);

@@ -32,9 +32,9 @@ export default async function AdminOrderDetail({
         <Link href={`/checkout/${order.id}/invoice`} className="label link-underline hover:text-ink">Invoice</Link>
         <p className="label">{order.createdAt.toISOString().slice(0, 16).replace("T", " ")}</p>
       </div>
-      {saved ? <p className="mt-3 text-sm text-brass">Saved.</p> : null}
+      {saved ? <p className="mt-3 text-sm text-brass-text">Saved.</p> : null}
       {error ? (
-        <p className="mt-3 text-sm text-brass">
+        <p className="mt-3 text-sm text-brass-text">
           {error === "norefund"
             ? "Only a paid order can be refunded."
             : error === "nosharef"

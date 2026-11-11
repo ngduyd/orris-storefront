@@ -34,7 +34,7 @@ export default async function AccountRegister({ searchParams }: { searchParams: 
           <span className="label">Password (8+ characters)</span>
           <input name="password" type="password" required minLength={8} autoComplete="new-password" className="mt-2 w-full border border-line bg-transparent px-3 py-2.5 text-sm focus:border-ink focus:outline-none" />
         </label>
-        {error ? <p className="text-sm text-brass">{MESSAGES[error] ?? "Check your details."}</p> : null}
+        {error ? <p className="text-sm text-brass-text">{MESSAGES[error] ?? "Check your details."}</p> : null}
         <button className="w-full border border-ink px-6 py-3 text-[0.7rem] uppercase tracking-[0.18em] transition-colors duration-300 ease-[var(--ease-out-soft)] hover:bg-ink hover:text-ivory">
           Create account
         </button>

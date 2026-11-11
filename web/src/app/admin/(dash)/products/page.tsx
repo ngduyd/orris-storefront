@@ -67,8 +67,8 @@ export default async function AdminProducts({ searchParams }: { searchParams: Pr
                 <Link href={`/admin/products/${p.handle}`} className="link-underline">{p.brand} · {p.title}</Link>
                 <span className="block text-xs text-taupe">{p.sizeMl} ml</span>
               </td>
-              <td className={`py-2 ${p.status === "active" ? "text-ink-soft" : "text-brass"}`}>{p.status}</td>
-              <td className={`py-2 text-right ${p.stock < 5 ? "text-brass" : "text-ink-soft"}`}>{p.stock}</td>
+              <td className={`py-2 ${p.status === "active" ? "text-ink-soft" : "text-brass-text"}`}>{p.status}</td>
+              <td className={`py-2 text-right ${p.stock < 5 ? "text-brass-text" : "text-ink-soft"}`}>{p.stock}</td>
               <td className="py-2 text-right">{usd(p.priceMinor)}</td>
             </tr>
           ))}
