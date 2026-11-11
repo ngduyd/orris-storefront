@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
@@ -14,7 +14,7 @@ const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 /** Sign-in for any account (manager or customer). Roles are checked by callers. */
 export async function signIn(email: string, password: string) {
   const [user] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
-  if (!user?.passwordHash) return null;
+  if (!user?.passwordHash || user.disabledAt) return null;
   if (!(await verifyPassword(password, user.passwordHash))) return null;
 
   await createSession(user.id);
@@ -43,14 +43,15 @@ export async function signOut() {
 }
 
 /** Any signed-in account, customers included. */
-export async function currentUser() {
-  const id = (await cookies()).get(SESSION_COOKIE)?.value;
+export async function currentUser(sessionId?: string) {
+  // sessionId is only passed by tests; requests always read the cookie
+  const id = sessionId ?? (await cookies()).get(SESSION_COOKIE)?.value;
   if (!id) return null;
   const [row] = await db
     .select({ id: users.id, email: users.email, role: users.role, emailVerifiedAt: users.emailVerifiedAt })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
-    .where(and(eq(sessions.id, id), gt(sessions.expiresAt, new Date())))
+    .where(and(eq(sessions.id, id), gt(sessions.expiresAt, new Date()), isNull(users.disabledAt)))
     .limit(1);
   return row ?? null;
 }
@@ -68,7 +69,7 @@ export async function currentAdmin() {
     .select({ id: users.id, email: users.email })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
-    .where(and(eq(sessions.id, id), gt(sessions.expiresAt, new Date())))
+    .where(and(eq(sessions.id, id), gt(sessions.expiresAt, new Date()), isNull(users.disabledAt)))
     .limit(1);
   return row ?? null;
 }
@@ -93,3 +94,12 @@ export async function requireManager() {
 }
 
 export const canManage = (role: string) => role === "manager";
+
+/**
+ * Block or unblock an account. Blocking also deletes its sessions: a cookie must stop working the
+ * moment the decision is made, not when it happens to expire.
+ */
+export async function setUserDisabled(userId: string, disabled: boolean) {
+  await db.update(users).set({ disabledAt: disabled ? new Date() : null }).where(eq(users.id, userId));
+  if (disabled) await db.delete(sessions).where(eq(sessions.userId, userId));
+}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listUsers } from "@/lib/admin";
-import { saveUserRoleAction } from "@/actions/admin";
+import { saveUserRoleAction, setUserBlockedAction } from "@/actions/admin";
 import { requireManager } from "@/lib/auth";
 import { usd } from "@/lib/money";
 
@@ -56,6 +56,7 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
               <td className="py-3">
                 <Link href={`/admin/users/${u.id}`} className="link-underline">{u.email}</Link>
                 <span className="ml-2 text-xs text-taupe">{u.provider ?? "password"}{u.name ? ` · ${u.name}` : ""}</span>
+                {u.disabledAt ? <span className="ml-2 border border-brass px-1.5 py-0.5 text-[0.6rem] uppercase tracking-[0.14em] text-brass">blocked</span> : null}
               </td>
               <td className="py-3 text-taupe">{u.orders}</td>
               <td className="py-3 text-right">{usd(u.spent)}</td>
@@ -67,6 +68,13 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
                     {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                   <button className="label min-h-6 text-brass hover:text-ink">Save</button>
+                </form>
+                <form action={setUserBlockedAction} className="mt-1">
+                  <input type="hidden" name="id" value={u.id} />
+                  <input type="hidden" name="blocked" value={u.disabledAt ? "0" : "1"} />
+                  <button className={`text-xs ${u.disabledAt ? "text-taupe hover:text-ink" : "text-brass hover:text-ink"}`}>
+                    {u.disabledAt ? "Unblock" : "Block"}
+                  </button>
                 </form>
               </td>
             </tr>

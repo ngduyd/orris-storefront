@@ -80,6 +80,9 @@ export async function GET(req: Request) {
     }
   }
 
+  const [account] = await db.select({ disabledAt: users.disabledAt }).from(users).where(eq(users.id, userId)).limit(1);
+  if (account?.disabledAt) return fail("disabled");
+
   await createSession(userId);
   return Response.redirect(`${origin}${next.startsWith("/") ? next : "/account"}`, 302);
 }

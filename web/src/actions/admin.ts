@@ -3,7 +3,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireManager, requireStaff } from "@/lib/auth";
+import { requireManager, requireStaff, setUserDisabled } from "@/lib/auth";
 import { cancelOrder, decideReturn, refundOrder } from "@/lib/orders";
 import { sendOrderClosed, sendShippingNotice } from "@/lib/bill";
 import {
@@ -266,6 +266,26 @@ export async function saveUserRoleAction(fd: FormData) {
 
   await setUserRole(id, role as (typeof allowed)[number]);
   await writeAudit({ actorId: actor.id, actorEmail: actor.email, action: "user.role", targetType: "user", targetId: id, detail: `role -> ${role}` });
+  revalidatePath("/admin/users");
+  redirect("/admin/users?saved=1");
+}
+
+export async function setUserBlockedAction(fd: FormData) {
+  const actor = await requireManager();
+  const id = String(fd.get("id") ?? "");
+  const blocked = String(fd.get("blocked") ?? "") === "1";
+  if (!id) redirect("/admin/users?error=1");
+  if (id === actor.id) redirect("/admin/users?error=self"); // never lock yourself out
+
+  await setUserDisabled(id, blocked);
+  await writeAudit({
+    actorId: actor.id,
+    actorEmail: actor.email,
+    action: blocked ? "user.disabled" : "user.enabled",
+    targetType: "user",
+    targetId: id,
+    detail: blocked ? "account blocked, sessions ended" : "account unblocked",
+  });
   revalidatePath("/admin/users");
   redirect("/admin/users?saved=1");
 }

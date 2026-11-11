@@ -156,6 +156,7 @@ export async function listUsers({ q, role, page }: { q?: string; role?: string; 
       name: users.name,
       provider: users.provider,
       verified: users.emailVerifiedAt,
+      disabledAt: users.disabledAt,
       createdAt: users.createdAt,
       orders: sql<number>`count(distinct ${orders.id})::int`,
       spent: sql<number>`coalesce(sum(${orders.totalMinor}) filter (where ${orders.paid}), 0)::int`,
