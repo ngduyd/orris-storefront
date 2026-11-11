@@ -15,6 +15,8 @@ export type AuditAction =
   | "order.return_rejected"
   | "order.shipping"
   | "user.role"
+  | "user.disabled"
+  | "user.enabled"
   | "user.password"
   | "brand.rename"
   | "review.hide"

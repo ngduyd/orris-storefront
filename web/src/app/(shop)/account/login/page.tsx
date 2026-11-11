@@ -34,6 +34,10 @@ export default async function AccountLogin({ searchParams }: { searchParams: Pro
           <p className="text-sm text-brass">Google sign-in is unavailable. Use email and password instead.</p>
         ) : error === "state" ? (
           <p className="text-sm text-brass">That sign-in link expired. Try again.</p>
+        ) : error === "disabled" ? (
+          <p className="text-sm text-brass">
+            This account is blocked. We cannot sign you in — reply to a past order email if you think that is a mistake.
+          </p>
         ) : error === "unverified" ? (
           <p className="text-sm text-brass">
             That Google account has not verified its email address, so it cannot be linked to an existing account.

@@ -62,6 +62,7 @@ export const users = pgTable(
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     provider: text("provider"), // null = email+password; "google" = OAuth
     providerId: text("provider_id"), // provider subject id
+    disabledAt: timestamp("disabled_at", { withTimezone: true }), // blocked: no sign-in, no live session
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("users_email_idx").on(t.email), uniqueIndex("users_provider_idx").on(t.provider, t.providerId)],
