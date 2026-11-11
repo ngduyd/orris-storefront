@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { payAction } from "@/actions/pay";
-import { cancelMyOrderAction } from "@/actions/order";
-import { getOrder, selfCancelFor } from "@/lib/orders";
+import { cancelMyOrderAction, requestReturnAction } from "@/actions/order";
+import { canRequestReturn, getOrder, selfCancelFor } from "@/lib/orders";
 import { currentUser } from "@/lib/auth";
 import { canAccessOrder } from "@/lib/order-access";
 import { stripeEnabled } from "@/lib/stripe";
@@ -24,7 +24,7 @@ export default async function OrderPage({
   searchParams,
 }: PageProps<"/checkout/[id]">) {
   const { id } = await params;
-  const { paid, cancel, error, cancelled, refunded } = await searchParams;
+  const { paid, cancel, error, cancelled, refunded, return: returned } = await searchParams;
   const order = await getOrder(id);
   if (!order) notFound();
 
@@ -81,6 +81,7 @@ export default async function OrderPage({
       {error === "inprogress" ? <p className="mt-6 text-sm text-taupe">This order is already being prepared. Reply to your confirmation email and we will sort it out.</p> : null}
       {error === "norefund" ? <p className="mt-6 text-sm text-brass">The refund did not go through. Nothing was changed — please try again.</p> : null}
       {refunded === "1" ? <p className="mt-6 text-sm text-taupe">Refunded. It lands on your card within a few business days.</p> : null}
+      {error === "return" ? <p className="mt-6 text-sm text-taupe">A return was already requested for this order.</p> : null}
 
       {owns && mode === "cancel" ? (
         <form action={cancelMyOrderAction} className="mt-6">
@@ -88,6 +89,28 @@ export default async function OrderPage({
           <button className="label border-b border-taupe pb-1 text-taupe hover:text-ink">Cancel order</button>
         </form>
       ) : null}
+      {returned === "1" ? <p className="mt-6 text-sm text-taupe">Return requested. We will reply by email once it is reviewed.</p> : null}
+      {order.returnStatus === "requested" ? <p className="mt-6 text-sm text-taupe">Return requested — waiting for review.</p> : null}
+      {order.returnStatus === "rejected" ? <p className="mt-6 text-sm text-brass">Return refused. Reply to your confirmation email if you want us to look again.</p> : null}
+
+      {owns && canRequestReturn(order) ? (
+        <form action={requestReturnAction} className="mt-6 max-w-md border-t border-line pt-6">
+          <input type="hidden" name="orderId" value={order.id} />
+          <label htmlFor="reason" className="label text-taupe">Why are you sending it back?</label>
+          <textarea
+            id="reason"
+            name="reason"
+            rows={3}
+            maxLength={300}
+            required
+            className="mt-2 w-full border border-line bg-transparent px-3 py-2 text-sm text-ink outline-none focus:border-brass"
+          />
+          <button className="mt-3 border border-ink px-6 py-2.5 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
+            Request a return
+          </button>
+        </form>
+      ) : null}
+
       {owns && mode === "refund" ? (
         <form action={cancelMyOrderAction} className="mt-6">
           <input type="hidden" name="orderId" value={order.id} />

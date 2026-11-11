@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cancelOrderAction, refundOrderAction, saveOrderStatusAction, saveShippingAction } from "@/actions/admin";
+import { cancelOrderAction, decideReturnAction, refundOrderAction, saveOrderStatusAction, saveShippingAction } from "@/actions/admin";
 import { getOrderDetail, type OrderStatus } from "@/lib/admin";
 import { canManage, requireStaff } from "@/lib/auth";
 import { usd } from "@/lib/money";
@@ -145,6 +145,33 @@ export default async function AdminOrderDetail({
           </button>
           <span className="text-xs text-taupe">Returns the stock to the shelf and marks the order cancelled.</span>
         </form>
+      ) : null}
+
+      {manager && order.returnStatus === "requested" ? (
+        <div className="mt-8 border-t border-line pt-6">
+          <p className="label text-taupe">Return requested</p>
+          <p className="mt-2 max-w-xl text-sm text-ink-soft">{order.returnReason || "No reason given."}</p>
+          <div className="mt-4 flex items-center gap-3">
+            <form action={decideReturnAction}>
+              <input type="hidden" name="id" value={order.id} />
+              <input type="hidden" name="decision" value="approve" />
+              <button className="border border-ink px-6 py-2.5 text-[0.7rem] uppercase tracking-[0.18em] hover:bg-ink hover:text-ivory">
+                Approve and refund
+              </button>
+            </form>
+            <form action={decideReturnAction}>
+              <input type="hidden" name="id" value={order.id} />
+              <input type="hidden" name="decision" value="reject" />
+              <button className="border border-line px-6 py-2.5 text-[0.7rem] uppercase tracking-[0.18em] text-taupe hover:border-ink hover:text-ink">
+                Reject
+              </button>
+            </form>
+          </div>
+          <p className="mt-3 text-xs text-taupe">Approving refunds the card and puts the stock back. Rejecting leaves the order delivered.</p>
+        </div>
+      ) : null}
+      {manager && order.returnStatus && order.returnStatus !== "requested" ? (
+        <p className="mt-8 border-t border-line pt-6 text-xs uppercase tracking-[0.14em] text-taupe">Return {order.returnStatus}</p>
       ) : null}
 
       {manager && order.paid ? (
