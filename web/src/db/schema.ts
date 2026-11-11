@@ -170,6 +170,9 @@ export const orders = pgTable(
     stockReleased: boolean("stock_released").notNull().default(false), // stock already returned
     reservedUntil: timestamp("reserved_until", { withTimezone: true }), // stock held until this moment
     paid: boolean("paid").notNull().default(false),
+    returnStatus: text("return_status"), // requested | approved | rejected; null = never asked
+    returnReason: text("return_reason"),
+    returnRequestedAt: timestamp("return_requested_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

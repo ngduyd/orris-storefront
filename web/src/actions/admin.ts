@@ -4,7 +4,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireManager, requireStaff } from "@/lib/auth";
-import { cancelOrder, refundOrder } from "@/lib/orders";
+import { cancelOrder, decideReturn, refundOrder } from "@/lib/orders";
 import { sendOrderClosed, sendShippingNotice } from "@/lib/bill";
 import {
   brandExists,
@@ -181,6 +181,18 @@ export async function refundOrderAction(fd: FormData) {
   }
   revalidatePath("/admin/orders");
   redirect(`/admin/orders/${encodeURIComponent(id)}?${ok ? "saved=1" : "error=norefund"}`);
+}
+
+/** Approve a return (refund + restock) or reject it. Only a manager moves money. */
+export async function decideReturnAction(fd: FormData) {
+  const actor = await requireManager();
+  const id = String(fd.get("id") ?? "");
+  if (!id) redirect("/admin/orders");
+  const approve = String(fd.get("decision") ?? "") === "approve";
+  const ok = await decideReturn(id, actor.email, approve);
+  if (ok && approve) await sendOrderClosed(id, await requestOrigin(), "refunded");
+  revalidatePath("/admin/orders");
+  redirect(`/admin/orders/${encodeURIComponent(id)}?${ok ? "saved=1" : "error=noreturn"}`);
 }
 
 /** Carrier (or manager) updates carrier, tracking code and shipping status. */

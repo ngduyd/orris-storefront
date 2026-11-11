@@ -40,8 +40,95 @@ export type PlaceOrderResult =
   | { ok: true; orderId: string; totalMinor: number }
   | { ok: false; error: "EMPTY_CART" | "OUT_OF_STOCK" | "COUPON" | "TOO_MANY_PENDING" };
 
+/**
+ * A return is only meaningful once the parcel arrived and the money is still ours. One request per
+ * order: the conditional UPDATE is what enforces that, not a read followed by a write.
+ */
+export function canRequestReturn(order: { status: string; paid: boolean; returnStatus: string | null }) {
+  return order.status === "delivered" && order.paid && !order.returnStatus;
+}
+
+export async function requestReturn(orderId: string, actorEmail: string, reason: string): Promise<boolean> {
+  const [claimed] = await db
+    .update(orders)
+    .set({
+      returnStatus: "requested",
+      returnReason: reason.trim().slice(0, 300),
+      returnRequestedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(orders.id, orderId),
+        eq(orders.status, "delivered"),
+        eq(orders.paid, true),
+        isNull(orders.returnStatus),
+      ),
+    )
+    .returning({ id: orders.id });
+  if (!claimed) return false;
+
+  await writeAudit({
+    actorId: null,
+    actorEmail,
+    action: "order.return_requested",
+    targetType: "order",
+    targetId: orderId,
+  });
+  return true;
+}
+
+/**
+ * Approving a return is a refund plus a reason trail, so it goes through refundOrder (claim, Stripe,
+ * restock). A failed refund puts the request back to "requested" instead of losing it.
+ */
+export async function decideReturn(orderId: string, actorEmail: string, approve: boolean): Promise<boolean> {
+  const [claimed] = await db
+    .update(orders)
+    .set({ returnStatus: approve ? "approved" : "rejected" })
+    .where(and(eq(orders.id, orderId), eq(orders.returnStatus, "requested")))
+    .returning({ id: orders.id });
+  if (!claimed) return false;
+
+  if (!approve) {
+    await writeAudit({
+      actorId: null,
+      actorEmail,
+      action: "order.return_rejected",
+      targetType: "order",
+      targetId: orderId,
+    });
+    return true;
+  }
+
+  if (!(await refundOrder(orderId, actorEmail))) {
+    await db.update(orders).set({ returnStatus: "requested" }).where(eq(orders.id, orderId));
+    return false;
+  }
+
+  await writeAudit({
+    actorId: null,
+    actorEmail,
+    action: "order.return_approved",
+    targetType: "order",
+    targetId: orderId,
+  });
+  return true;
+}
+
 /** A pending order holds stock, so an unbounded number of them is a way to empty the shelf. */
 export const MAX_PENDING_PER_EMAIL = 3;
+
+/**
+ * A customer may undo their own order with no money involved while it is pending, and with a refund
+ * only while it is merely paid — once fulfilment starts, stock is picked and a refund is a return,
+ * not a cancellation, so it needs a human.
+ */
+export type SelfCancel = "cancel" | "refund" | "none";
+export function selfCancelFor(status: string): SelfCancel {
+  if (status === "pending") return "cancel";
+  if (status === "paid") return "refund";
+  return "none";
+}
 
 /**
  * How long a pending order holds its stock. Longer than Stripe's 30-minute minimum session lifetime,

@@ -12,7 +12,7 @@ import { currentUser } from "@/lib/auth";
 import { canAccessOrder } from "@/lib/order-access";
 import { requestOrigin } from "@/lib/origin";
 import { sendOrderClosed } from "@/lib/bill";
-import { cancelOrder, getOrder, placeOrder } from "@/lib/orders";
+import { canRequestReturn, cancelOrder, getOrder, placeOrder, refundOrder, requestReturn, selfCancelFor } from "@/lib/orders";
 import { clientIp, noteFailure, tooMany } from "@/lib/rate-limit";
 
 const HOUR = 60 * 60 * 1000;
@@ -74,13 +74,40 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
   redirect(`/checkout/${res.orderId}`);
 }
 
-/** Customer cancels their own pending order; the stock goes back immediately. */
+/** A delivered order can be sent back: the request is recorded, a manager decides. */
+export async function requestReturnAction(fd: FormData) {
+  const id = String(fd.get("orderId") ?? "");
+  const back = id ? `/checkout/${encodeURIComponent(id)}` : "/shop";
+  const user = await currentUser();
+  const order = id ? await getOrder(id) : null;
+  if (!user || !order || !canAccessOrder(user, order) || !canRequestReturn(order)) redirect(back);
+
+  const reason = String(fd.get("reason") ?? "");
+  const ok = await requestReturn(order.id, user.email, reason);
+  revalidatePath("/", "layout");
+  redirect(`${back}?${ok ? "return=1" : "error=return"}`);
+}
+
+/**
+ * Customer undoes their own order: pending is a plain cancel, already-paid is a refund through the
+ * same path a manager uses (claim, Stripe, stock back). Anything past payment needs a human.
+ */
 export async function cancelMyOrderAction(fd: FormData) {
   const id = String(fd.get("orderId") ?? "");
   const back = id ? `/checkout/${encodeURIComponent(id)}` : "/shop";
   const user = await currentUser();
   const order = id ? await getOrder(id) : null;
   if (!user || !order || !canAccessOrder(user, order)) redirect("/shop");
+
+  const mode = selfCancelFor(order.status);
+  if (mode === "none") redirect(`${back}?error=inprogress`);
+
+  if (mode === "refund") {
+    const refunded = await refundOrder(order.id, `customer:${user.email}`);
+    if (refunded) await sendOrderClosed(order.id, await requestOrigin(), "refunded");
+    revalidatePath("/", "layout");
+    redirect(`${back}?${refunded ? "refunded=1" : "error=norefund"}`);
+  }
 
   const cancelled = await cancelOrder(order.id, user.email);
   if (cancelled) {
