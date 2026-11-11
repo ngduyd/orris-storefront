@@ -6,6 +6,9 @@ import { carts, orderItems, orders, products } from "@/db/schema";
 import { addLine, readCart } from "@/lib/cart";
 import { placeOrder } from "@/lib/orders";
 
+/** A fresh address per checkout: the pending-order cap keys on email. */
+const buyer = () => `buyer-${randomUUID().slice(0, 8)}@example.com`;
+
 const H = "mont-blanc-mont-blanc-explorer-100ml";
 const H2 = "givenchy-givenchy-l-interdit-50ml";
 const cleanup: { cartId: string; orderIds: string[] }[] = [];
@@ -49,7 +52,7 @@ describe("placeOrder", () => {
       .where(inArray(products.handle, [H, H2]));
     const expected = prices.reduce((s, r) => s + (r.h === H ? r.p * 2 : r.p), 0);
 
-    const res = await placeOrder({ cartId: c.cartId, email: "a@b.co", name: "Test", address: "Somewhere 1" });
+    const res = await placeOrder({ cartId: c.cartId, email: buyer(), name: "Test", address: "Somewhere 1" });
     if (!res.ok) throw new Error(res.error);
     c.orderIds.push(res.orderId);
 
@@ -65,7 +68,7 @@ describe("placeOrder", () => {
     const c = await freshCart();
     const [before] = await db.select({ stock: products.stock }).from(products).where(eq(products.handle, H));
     await addLine(c.cartId, H, 3);
-    const res = await placeOrder({ cartId: c.cartId, email: "a@b.co", name: "Test", address: "Somewhere 1" });
+    const res = await placeOrder({ cartId: c.cartId, email: buyer(), name: "Test", address: "Somewhere 1" });
     if (!res.ok) throw new Error(res.error);
     c.orderIds.push(res.orderId);
 
@@ -76,7 +79,7 @@ describe("placeOrder", () => {
 
   it("giỏ rỗng -> EMPTY_CART, không tạo order", async () => {
     const c = await freshCart();
-    const res = await placeOrder({ cartId: c.cartId, email: "a@b.co", name: "Test", address: "Somewhere 1" });
+    const res = await placeOrder({ cartId: c.cartId, email: buyer(), name: "Test", address: "Somewhere 1" });
     expect(res).toEqual({ ok: false, error: "EMPTY_CART" });
   });
 
@@ -85,7 +88,7 @@ describe("placeOrder", () => {
     await addLine(c.cartId, H2, 1);
     await db.update(products).set({ stock: 0 }).where(eq(products.handle, H2));
 
-    const res = await placeOrder({ cartId: c.cartId, email: "a@b.co", name: "Test", address: "Somewhere 1" });
+    const res = await placeOrder({ cartId: c.cartId, email: buyer(), name: "Test", address: "Somewhere 1" });
     expect(res).toEqual({ ok: false, error: "OUT_OF_STOCK" });
 
     const [after] = await db.select({ stock: products.stock }).from(products).where(eq(products.handle, H2));
@@ -97,7 +100,7 @@ describe("duplicate submit & concurrency", () => {
   it("submit lần 2 cùng cart -> EMPTY_CART, không tạo đơn thứ hai", async () => {
     const c = await freshCart();
     await addLine(c.cartId, H, 1);
-    const input = { cartId: c.cartId, email: "a@b.co", name: "Test", address: "Somewhere 1" };
+    const input = { cartId: c.cartId, email: buyer(), name: "Test", address: "Somewhere 1" };
     const first = await placeOrder(input);
     const second = await placeOrder(input);
     if (!first.ok) throw new Error(first.error);
@@ -110,7 +113,7 @@ describe("duplicate submit & concurrency", () => {
     await db.update(products).set({ stock: 1 }).where(eq(products.handle, H2));
     await addLine(c.cartId, H2, 1);
 
-    const input = { cartId: c.cartId, email: "a@b.co", name: "Test", address: "Somewhere 1" };
+    const input = { cartId: c.cartId, email: buyer(), name: "Test", address: "Somewhere 1" };
     const results = await Promise.all([placeOrder(input), placeOrder(input)]);
     const ok = results.filter((r) => r.ok);
     expect(ok).toHaveLength(1);

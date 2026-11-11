@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cartItems, coupons, orderItems, orders, products } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
@@ -14,11 +14,13 @@ export function shippingFor(subtotalMinor: number) {
   return flat;
 }
 
+type Reader = { select: typeof db.select };
+
 /** Percent discount from the coupons table. Unknown or inactive codes are rejected. */
-export async function couponDiscount(code: string | null | undefined, subtotalMinor: number) {
+export async function couponDiscount(code: string | null | undefined, subtotalMinor: number, exec: Reader = db) {
   const key = (code ?? "").trim().toUpperCase().slice(0, 32);
   if (!key) return { ok: true as const, discountMinor: 0, code: null };
-  const [row] = await db.select().from(coupons).where(eq(coupons.code, key)).limit(1);
+  const [row] = await exec.select().from(coupons).where(eq(coupons.code, key)).limit(1);
   if (!row || !row.active) return { ok: false as const };
   const discountMinor = Math.floor((subtotalMinor * Math.min(row.percent, 90)) / 100);
   return { ok: true as const, discountMinor, code: key };
@@ -36,7 +38,10 @@ type PlaceOrderInput = {
 
 export type PlaceOrderResult =
   | { ok: true; orderId: string; totalMinor: number }
-  | { ok: false; error: "EMPTY_CART" | "OUT_OF_STOCK" | "COUPON" };
+  | { ok: false; error: "EMPTY_CART" | "OUT_OF_STOCK" | "COUPON" | "TOO_MANY_PENDING" };
+
+/** A pending order holds stock, so an unbounded number of them is a way to empty the shelf. */
+export const MAX_PENDING_PER_EMAIL = 3;
 
 /**
  * How long a pending order holds its stock. Longer than Stripe's 30-minute minimum session lifetime,
@@ -45,74 +50,109 @@ export type PlaceOrderResult =
  */
 export const RESERVATION_MINUTES = 35;
 
+/** The cart's lines with the shelf quantity, read without locks: this is only a filter. */
+function readCartLines(cartId: string) {
+  return db
+    .select({
+      handle: cartItems.handle,
+      qty: cartItems.qty,
+      stock: products.stock,
+    })
+    .from(cartItems)
+    .innerJoin(products, eq(products.handle, cartItems.handle))
+    .where(eq(cartItems.cartId, cartId));
+}
+
+/** Thrown inside the transaction so a losing reservation rolls back instead of committing. */
+class ReservationFailed extends Error {
+  constructor(readonly reason: "OUT_OF_STOCK" | "COUPON") {
+    super(reason);
+  }
+}
+
 /**
  * Create a pending order. Prices ALWAYS come from the DB at checkout time, never from the client.
- * Decrement stock and clear the cart in one transaction; the stock stays held until the reservation expires.
+ *
+ * When many people want the same last units, the waste is not the oversell (a row lock prevents it)
+ * but the queue: every loser would wait its turn before learning the shelf is empty. So the check is
+ * split in two. A lock-free SELECT filters the crowd first — a request that cannot afford the line
+ * answers OUT_OF_STOCK in one round trip and never touches a lock. The reservation itself is then a
+ * single conditional UPDATE per line, in handle order, so the row lock lives for one statement
+ * instead of the whole transaction and two carts sharing two SKUs cannot deadlock.
  */
 export async function placeOrder({ cartId, email, name, address, phone, couponCode, userId }: PlaceOrderInput): Promise<PlaceOrderResult> {
-  await releaseExpiredReservations();
+  let lines = await readCartLines(cartId);
+  if (!lines.length) return { ok: false, error: "EMPTY_CART" };
 
-  return db.transaction(async (tx) => {
-    const lines = await tx
-      .select({
-        handle: cartItems.handle,
-        qty: cartItems.qty,
-        title: products.title,
-        priceMinor: products.priceMinor,
-        stock: products.stock,
-      })
-      .from(cartItems)
-      .innerJoin(products, eq(products.handle, cartItems.handle))
-      .where(eq(cartItems.cartId, cartId))
-      .for("update", { of: products });
+  if (lines.some((l) => l.qty > l.stock)) {
+    // the shortfall may be a hold that already ran out; the sweep is advisory-locked, so only one
+    // caller does the work and the rest return immediately
+    await releaseExpiredReservations();
+    lines = await readCartLines(cartId);
+    if (lines.some((l) => l.qty > l.stock)) return { ok: false, error: "OUT_OF_STOCK" };
+  }
 
-    if (!lines.length) return { ok: false as const, error: "EMPTY_CART" as const };
-    if (lines.some((l) => l.qty > l.stock)) return { ok: false as const, error: "OUT_OF_STOCK" as const };
+  const [{ pending }] = await db
+    .select({ pending: sql<number>`count(*)::int` })
+    .from(orders)
+    .where(and(eq(orders.email, email), eq(orders.status, "pending")));
+  if (pending >= MAX_PENDING_PER_EMAIL) return { ok: false, error: "TOO_MANY_PENDING" };
 
-    const subtotalMinor = lines.reduce((s, l) => s + l.priceMinor * l.qty, 0);
-    const coupon = await couponDiscount(couponCode, subtotalMinor);
-    if (!coupon.ok) return { ok: false as const, error: "COUPON" as const };
-    const shippingMinor = shippingFor(subtotalMinor);
-    const totalMinor = Math.max(0, subtotalMinor + shippingMinor - coupon.discountMinor);
-    const orderId = randomUUID();
+  try {
+    return await db.transaction(async (tx) => {
+      const reserved: { handle: string; title: string; qty: number; priceMinor: number }[] = [];
+      for (const l of [...lines].sort((a, b) => (a.handle < b.handle ? -1 : 1))) {
+        const [row] = await tx
+          .update(products)
+          .set({ stock: sql`${products.stock} - ${l.qty}`, updatedAt: new Date() })
+          .where(and(eq(products.handle, l.handle), gte(products.stock, l.qty)))
+          .returning({ priceMinor: products.priceMinor, title: products.title });
+        // no row means the shelf went empty between the filter above and this statement
+        if (!row) throw new ReservationFailed("OUT_OF_STOCK");
+        reserved.push({ handle: l.handle, title: row.title, qty: l.qty, priceMinor: row.priceMinor });
+      }
 
-    await tx.insert(orders).values({
-      id: orderId,
-      userId: userId ?? null,
-      email,
-      customerName: name,
-      address,
-      phone: phone?.trim().slice(0, 32) ?? "",
-      status: "pending",
-      subtotalMinor,
-      shippingMinor,
-      discountMinor: coupon.discountMinor,
-      couponCode: coupon.code,
-      totalMinor,
-      reservedUntil: new Date(Date.now() + RESERVATION_MINUTES * 60 * 1000),
+      const subtotalMinor = reserved.reduce((s, l) => s + l.priceMinor * l.qty, 0);
+      const coupon = await couponDiscount(couponCode, subtotalMinor, tx);
+      if (!coupon.ok) throw new ReservationFailed("COUPON");
+      const shippingMinor = shippingFor(subtotalMinor);
+      const totalMinor = Math.max(0, subtotalMinor + shippingMinor - coupon.discountMinor);
+      const orderId = randomUUID();
+
+      await tx.insert(orders).values({
+        id: orderId,
+        userId: userId ?? null,
+        email,
+        customerName: name,
+        address,
+        phone: phone?.trim().slice(0, 32) ?? "",
+        status: "pending",
+        subtotalMinor,
+        shippingMinor,
+        discountMinor: coupon.discountMinor,
+        couponCode: coupon.code,
+        totalMinor,
+        reservedUntil: new Date(Date.now() + RESERVATION_MINUTES * 60 * 1000),
+      });
+
+      await tx.insert(orderItems).values(
+        reserved.map((l) => ({
+          id: randomUUID(),
+          orderId,
+          handle: l.handle,
+          title: l.title,
+          qty: l.qty,
+          priceMinor: l.priceMinor,
+        })),
+      );
+
+      await tx.delete(cartItems).where(eq(cartItems.cartId, cartId));
+      return { ok: true as const, orderId, totalMinor };
     });
-
-    await tx.insert(orderItems).values(
-      lines.map((l) => ({
-        id: randomUUID(),
-        orderId,
-        handle: l.handle,
-        title: l.title,
-        qty: l.qty,
-        priceMinor: l.priceMinor,
-      })),
-    );
-
-    for (const l of lines) {
-      await tx
-        .update(products)
-        .set({ stock: sql`${products.stock} - ${l.qty}`, updatedAt: new Date() })
-        .where(eq(products.handle, l.handle));
-    }
-
-    await tx.delete(cartItems).where(eq(cartItems.cartId, cartId));
-    return { ok: true as const, orderId, totalMinor };
-  });
+  } catch (e) {
+    if (e instanceof ReservationFailed) return { ok: false, error: e.reason };
+    throw e;
+  }
 }
 
 export async function getOrder(id: string) {
@@ -144,17 +184,28 @@ async function releaseStock(orderId: string) {
   return true;
 }
 
+/** Arbitrary constant so every instance agrees on the same sweep lock. */
+const SWEEP_LOCK_KEY = 991_042;
+export const SWEEP_BATCH = 100;
+
 /**
- * Cancel every pending order whose hold ran out and give its stock back. Safe to call often.
+ * Cancel expired pending orders and give their stock back. Safe to call often.
+ *
+ * Two guards keep it from becoming the hot spot under load: `pg_try_advisory_xact_lock` (not the
+ * blocking variant) means concurrent callers give up immediately instead of queueing, and the batch
+ * limit keeps one run from updating thousands of rows in a single transaction.
  * A NULL reserved_until (rows written before the column existed) counts as expired once the order
- * is older than RESERVATION_MINUTES. Claim, item read and increments share one transaction, so the
- * sweep cannot interleave with itself and hand the same qty back twice. Returns the orders claimed.
+ * is older than RESERVATION_MINUTES. Returns the number of orders claimed.
  */
 export async function releaseExpiredReservations() {
   return db.transaction(async (tx) => {
-    const expired = await tx
-      .update(orders)
-      .set({ status: "cancelled", stockReleased: true })
+    // `pg_try_lock` answers false instead of waiting: a sweeper that is already running is enough
+    const lockRes = await tx.execute<{ locked: boolean }>(sql`select pg_try_advisory_xact_lock(${SWEEP_LOCK_KEY}) as locked`);
+    if (!lockRes.rows[0]?.locked) return 0;
+
+    const due = tx
+      .select({ id: orders.id })
+      .from(orders)
       .where(
         and(
           eq(orders.status, "pending"),
@@ -163,6 +214,20 @@ export async function releaseExpiredReservations() {
             lt(orders.reservedUntil, sql`now()`),
             and(isNull(orders.reservedUntil), lt(orders.createdAt, sql`now() - (${RESERVATION_MINUTES} * interval '1 minute')`)),
           ),
+        ),
+      )
+      .limit(SWEEP_BATCH);
+
+    // the conditions are repeated here, not just in the subquery: the claim must hold even if the
+    // rows changed between the two statements
+    const expired = await tx
+      .update(orders)
+      .set({ status: "cancelled", stockReleased: true })
+      .where(
+        and(
+          inArray(orders.id, due),
+          eq(orders.status, "pending"),
+          eq(orders.stockReleased, false),
         ),
       )
       .returning({ id: orders.id });
