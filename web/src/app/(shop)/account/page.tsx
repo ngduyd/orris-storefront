@@ -103,10 +103,13 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       <h2 className="label mt-12">Orders</h2>
       <p className="mt-4 text-sm text-ink-soft">
         {orderCount ? `${orderCount} order${orderCount === 1 ? "" : "s"} on this account.` : "No orders yet."}{" "}
-        {orderCount ? (
-          <Link href="/account/orders" className="link-underline text-ink">See every order</Link>
-        ) : (
-          <Link href="/shop" className="link-underline text-ink">Browse the collection</Link>
+        {/* always reachable: the history page carries its own empty state */}
+        <Link href="/account/orders" className="link-underline text-ink">See every order</Link>
+        {orderCount ? null : (
+          <>
+            {" or "}
+            <Link href="/shop" className="link-underline text-ink">browse the collection</Link>
+          </>
         )}
       </p>
     </div>
