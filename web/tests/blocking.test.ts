@@ -47,8 +47,9 @@ describe("blocking an account", () => {
     const userId = await seedUser(email);
     await setUserDisabled(userId, true);
 
-    // signIn answers null before it ever creates a session
-    expect(await signIn(email, password)).toBeNull();
+    // "disabled" only after the password matched, so this says nothing to a guesser
+    expect(await signIn(email, password)).toBe("disabled");
+    expect(await signIn(email, "wrong-password")).toBeNull();
   });
 
   it("unblocking lets the account back in", async () => {

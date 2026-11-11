@@ -11,11 +11,17 @@ import { isHttps } from "@/lib/cookie-secure";
 export const SESSION_COOKIE = "orris_admin";
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Sign-in for any account (manager or customer). Roles are checked by callers. */
+/**
+ * Sign-in for any account (manager or customer). Roles are checked by callers.
+ * Returns "disabled" when the password is right but the account is blocked, so the caller can say so
+ * without leaking that an address exists to someone who does not know its password.
+ */
 export async function signIn(email: string, password: string) {
   const [user] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
-  if (!user?.passwordHash || user.disabledAt) return null;
+  if (!user?.passwordHash) return null;
   if (!(await verifyPassword(password, user.passwordHash))) return null;
+  // only after the password matched, so the message cannot be used to probe which emails exist
+  if (user.disabledAt) return "disabled";
 
   await createSession(user.id);
   return user;

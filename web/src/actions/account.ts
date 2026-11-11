@@ -40,6 +40,7 @@ export async function customerLoginAction(fd: FormData) {
   if (tooMany(key)) redirect(`/account/login?error=slow&next=${encodeURIComponent(next)}`);
 
   const user = await signIn(parsed.data.email, parsed.data.password);
+  if (user === "disabled") redirect(`/account/login?error=disabled&next=${encodeURIComponent(next)}`);
   if (!user) {
     noteFailure(key);
     redirect(`/account/login?error=1&next=${encodeURIComponent(next)}`);
