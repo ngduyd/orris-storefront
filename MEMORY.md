@@ -2,6 +2,7 @@
 
 ## Now
 
+- 2026-11-11 · Batch "portfolio": `/account/orders` (10/trang) + `/account/orders/[id]`, một component `OrderDetail` dùng chung với `/checkout/[id]`; `loading.tsx` cho /shop, /product, /admin/orders; `npm run a11y <url>` (axe 15 page view, fail nếu serious/critical); Sentry inert (không DSN = không init, `dataCollection` tắt userInfo/cookies/headers/bodies/query); `npm run seed:demo` (6 đơn trông thật); xoá 20 script debug; README có 5 ảnh + "Hard parts".
 - 2026-11-07 · Audit lần cuối, đã đóng thêm: phone ở checkout (+ cột `orders.phone`), phí ship (`SHIPPING_FLAT_MINOR`/`FREE_SHIPPING_OVER_MINOR`), mã giảm giá (bảng `coupons`, demo `ORRIS15` 15%), subtotal/shipping/discount lưu trên đơn và hiện ở order/invoice/admin, webhook `checkout.session.expired` huỷ đơn sớm, xoá file ảnh Cloudinary/local khi bỏ ảnh (có guard `imageUsedElsewhere`), OG mặc định ở root layout, `not-found.tsx` + `error.tsx`, JSON-LD Product, badge Sold out, mail khi cancel/refund, admin: search đơn (id/email/tên), lọc `low=1` (stock ≤3), trang `/admin/users/[id]`, upload API chặn mime + 8MB.
 - 2026-11-07 · 78 test pass (thêm pricing/coupon, tokens, guards: rate-limit + mọi action admin phải có require*). Verify bằng Playwright: đơn thật subtotal $54.67 + ship $2.67 − discount $8.20 = $49.13; admin search hit 1; low-stock filter hit 1; user detail 200.
 - Còn deferred: Redis (chỉ cần khi >1 instance), i18n/AR, analytics/consent.
