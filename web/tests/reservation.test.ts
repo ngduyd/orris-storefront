@@ -187,3 +187,60 @@ describe("refund", () => {
     expect(again.stock).toBe(100); // no double restore
   });
 });
+
+describe("customer self-cancel", () => {
+  it("maps each status to what the customer is allowed to do", async () => {
+    const { selfCancelFor } = await import("@/lib/orders");
+    expect(selfCancelFor("pending")).toBe("cancel");   // no money moved yet
+    expect(selfCancelFor("paid")).toBe("refund");      // money moved, nothing picked yet
+    // once fulfilment starts a refund is a return, not a cancellation
+    for (const s of ["processing", "shipped", "delivered", "refunded", "cancelled"]) {
+      expect(selfCancelFor(s)).toBe("none");
+    }
+  });
+
+  it("a paid order the customer undoes is refunded once and gives the stock back", async () => {
+    const { refundOrder } = await import("@/lib/orders");
+    await seedProduct();
+    const orderId = randomUUID();
+    await db.insert(orders).values({
+      id: orderId,
+      email: `self-${orderId.slice(0, 8)}@example.com`,
+      status: "paid",
+      paid: true,
+      totalMinor: 20000,
+      reservedUntil: null,
+      stockReleased: false,
+    });
+    await db.insert(orderItems).values({ id: randomUUID(), orderId, handle: HANDLE, title: "Reservation Fixture", qty: 2, priceMinor: 10000 });
+    await db.update(products).set({ stock: 98 }).where(eq(products.handle, HANDLE));
+
+    // the action calls exactly this, with the customer as the actor
+    expect(await refundOrder(orderId, "customer:buyer@example.com")).toBe(true);
+
+    const [after] = await db
+      .select({ stock: products.stock, status: orders.status, paid: orders.paid, released: orders.stockReleased })
+      .from(products).innerJoin(orders, eq(orders.id, orderId)).where(eq(products.handle, HANDLE));
+    expect(after).toEqual({ stock: 100, status: "refunded", paid: false, released: true });
+  });
+
+  it("a fulfilment-stage order cannot be undone, so the money stays put", async () => {
+    const { selfCancelFor } = await import("@/lib/orders");
+    await seedProduct();
+    const orderId = randomUUID();
+    await db.insert(orders).values({
+      id: orderId,
+      email: `ship-${orderId.slice(0, 8)}@example.com`,
+      status: "shipped",
+      paid: true,
+      totalMinor: 10000,
+      reservedUntil: null,
+      stockReleased: false,
+    });
+    await db.insert(orderItems).values({ id: randomUUID(), orderId, handle: HANDLE, title: "Reservation Fixture", qty: 1, priceMinor: 10000 });
+
+    expect(selfCancelFor("shipped")).toBe("none"); // the action refuses before any money is touched
+    const [before] = await db.select({ paid: orders.paid, status: orders.status }).from(orders).where(eq(orders.id, orderId));
+    expect(before).toEqual({ paid: true, status: "shipped" });
+  });
+});

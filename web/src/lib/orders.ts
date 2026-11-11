@@ -44,6 +44,18 @@ export type PlaceOrderResult =
 export const MAX_PENDING_PER_EMAIL = 3;
 
 /**
+ * A customer may undo their own order with no money involved while it is pending, and with a refund
+ * only while it is merely paid — once fulfilment starts, stock is picked and a refund is a return,
+ * not a cancellation, so it needs a human.
+ */
+export type SelfCancel = "cancel" | "refund" | "none";
+export function selfCancelFor(status: string): SelfCancel {
+  if (status === "pending") return "cancel";
+  if (status === "paid") return "refund";
+  return "none";
+}
+
+/**
  * How long a pending order holds its stock. Longer than Stripe's 30-minute minimum session lifetime,
  * so a legal session can always expire before the hold does. Expiry is still live when the hold is
  * older than (RESERVATION_MINUTES - 30) minutes: payAction then extends the hold, once, bounded.

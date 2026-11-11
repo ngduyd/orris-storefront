@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { payAction } from "@/actions/pay";
 import { cancelMyOrderAction } from "@/actions/order";
-import { getOrder } from "@/lib/orders";
+import { getOrder, selfCancelFor } from "@/lib/orders";
 import { currentUser } from "@/lib/auth";
 import { canAccessOrder } from "@/lib/order-access";
 import { stripeEnabled } from "@/lib/stripe";
@@ -35,6 +35,7 @@ export default async function OrderPage({
   if (!owns) notFound();
 
   const canPay = stripeEnabled && !order.paid && order.status === "pending" && !order.stockReleased;
+  const mode = selfCancelFor(order.status);
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-16 sm:px-8">
@@ -77,11 +78,20 @@ export default async function OrderPage({
       {error === "hold" ? <p className="mt-6 text-sm text-brass">This hold expired — place the order again.</p> : null}
       {error === "busy" ? <p className="mt-6 text-sm text-taupe">Payment is already starting — refresh in a moment.</p> : null}
       {error === "refund" ? <p className="mt-6 text-sm text-brass">Payment could not be confirmed or refunded — we will sort it out by email.</p> : null}
+      {error === "inprogress" ? <p className="mt-6 text-sm text-taupe">This order is already being prepared. Reply to your confirmation email and we will sort it out.</p> : null}
+      {error === "norefund" ? <p className="mt-6 text-sm text-brass">The refund did not go through. Nothing was changed — please try again.</p> : null}
+      {refunded === "1" ? <p className="mt-6 text-sm text-taupe">Refunded. It lands on your card within a few business days.</p> : null}
 
-      {owns && order.status === "pending" ? (
+      {owns && mode === "cancel" ? (
         <form action={cancelMyOrderAction} className="mt-6">
           <input type="hidden" name="orderId" value={order.id} />
           <button className="label border-b border-taupe pb-1 text-taupe hover:text-ink">Cancel order</button>
+        </form>
+      ) : null}
+      {owns && mode === "refund" ? (
+        <form action={cancelMyOrderAction} className="mt-6">
+          <input type="hidden" name="orderId" value={order.id} />
+          <button className="label border-b border-brass pb-1 text-brass hover:text-ink">Cancel and refund</button>
         </form>
       ) : null}
 
