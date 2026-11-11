@@ -103,6 +103,10 @@ is deliberate: podman-compose does not expand nested defaults such as `${A:-${B}
 tree that was not built by CI. `release.yml` publishes two tags per commit — `latest` (the
 runner) and `migrator` (the same Dockerfile with drizzle-kit for `db:push`).
 
+`web/scripts/e2e-self-refund.mjs` drives a deployed store through the whole money path in Stripe test
+mode (register, buy, pay 4242, cancel and refund) and fails loudly if the refund does not settle:
+`node scripts/e2e-self-refund.mjs https://your-host`.
+
 `scripts/deploy.sh` does the steps in order and works with docker or podman: `up -d db`, wait for
 `pg_isready`, `run --rm --no-deps migrate`, then `up -d db app`. The one-shot `migrate` service is
 never part of `up` (it is named explicitly nowhere) because podman-compose hangs when a one-shot
@@ -146,7 +150,10 @@ including a concurrent double submit, reservations and expiry, refunds restoring
 forward-only shipping, rate-limit windows, single-use tokens, order access rules, webhook
 signature verification, and a guard test asserting every admin action starts with a role check.
 
-Branches: work on `dev` — CI runs there and nothing is deployed from it. When it is green, merge to
+Branches: work on `dev` — CI runs there and nothing is deployed from it. PRs are merged with a merge
+commit (`gh pr merge --merge`), never squashed: squashing rewrites the commits, so `dev` would keep
+looking unmerged and every later PR would re-list old work, and the only way out of that is a
+force-push. Before opening a PR, `git fetch && git merge origin/master` so the branch is current. When it is green, merge to
 `master`; that push re-runs the same checks, publishes the images and deploys to Vercel, so nothing
 reaches production unless the checks pass. A `v*` tag is only a marker for a release and deploys
 nothing.

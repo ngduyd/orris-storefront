@@ -7,12 +7,38 @@ on:
     branches: [master]
 
 jobs:
+  schema:
+    # additive columns must exist before the new code answers a request; Vercel starts building the
+    # moment master is pushed, so this runs first and is skipped when the secret is absent
+    runs-on: ubuntu-latest
+    env:
+      PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        if: env.PROD_DATABASE_URL != ''
+        working-directory: web
+        run: npm ci
+      - name: Push the schema to production
+        if: env.PROD_DATABASE_URL != ''
+        working-directory: web
+        run: |
+          node scripts/ensure-extensions.mjs
+          npx drizzle-kit push --force
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+
   checks:
     # same tests/lint/typecheck as CI; master never reaches a build or a deployment unless this passes
     uses: ./.github/workflows/ci.yml
 
   build:
-    needs: checks
+    needs: [schema, checks]
     runs-on: ubuntu-latest
     permissions:
       contents: read
