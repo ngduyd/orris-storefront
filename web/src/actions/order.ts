@@ -66,6 +66,7 @@ export async function checkoutAction(_prev: CheckoutState, fd: FormData): Promis
   if (!res.ok) {
     if (res.error === "EMPTY_CART") return { error: "Your bag is empty." };
     if (res.error === "COUPON") return { error: "That coupon code is not valid." };
+    if (res.error === "TOO_MANY_PENDING") return { error: "You already have 3 unpaid orders. Cancel one or pay it first." };
     return { error: "An item just sold out. Adjust your bag." };
   }
 
