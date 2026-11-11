@@ -150,9 +150,10 @@ including a concurrent double submit, reservations and expiry, refunds restoring
 forward-only shipping, rate-limit windows, single-use tokens, order access rules, webhook
 signature verification, and a guard test asserting every admin action starts with a role check.
 
-Branches: work on `dev` — CI runs there and nothing is deployed from it. PRs are squash-merged, so
-after a merge `dev` still holds the original commits and every later PR would list them again: rebuild
-it on master (`git switch dev && git reset --hard origin/master`) before starting the next change. When it is green, merge to
+Branches: work on `dev` — CI runs there and nothing is deployed from it. PRs are merged with a merge
+commit (`gh pr merge --merge`), never squashed: squashing rewrites the commits, so `dev` would keep
+looking unmerged and every later PR would re-list old work, and the only way out of that is a
+force-push. Before opening a PR, `git fetch && git merge origin/master` so the branch is current. When it is green, merge to
 `master`; that push re-runs the same checks, publishes the images and deploys to Vercel, so nothing
 reaches production unless the checks pass. A `v*` tag is only a marker for a release and deploys
 nothing.
